@@ -114,7 +114,12 @@ fun StudioSettingsBottomSheet(
     onCheckLatestRelease: (String) -> Unit,
     onStartAutoUpdate: () -> Unit,
     onInstallReadyApk: () -> Unit,
-    onCopyWorkflowYaml: (String) -> Unit
+    onCopyWorkflowYaml: (String) -> Unit,
+    onToggleFloatingShortcut: (Boolean) -> Unit = {},
+    onToggleAutoSwipeAfterDownload: (Boolean) -> Unit = {},
+    onSelectSwipeDelaySeconds: (Int) -> Unit = {},
+    onSelectAutoScrollInterval: (Int) -> Unit = {},
+    onToggleAutoDownloadOnScroll: (Boolean) -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedTab by remember(initialTab) { mutableIntStateOf(initialTab) }
@@ -167,7 +172,7 @@ fun StudioSettingsBottomSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Clean 2-Tab Segmented Switcher inside Settings
+            // Clean 3-Tab Segmented Switcher inside Settings
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -177,8 +182,9 @@ fun StudioSettingsBottomSheet(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 val tabs = listOf(
-                    0 to "Chất lượng tải",
-                    1 to "Cập nhật ứng dụng"
+                    0 to "Chất lượng",
+                    1 to "Phím tắt TikTok",
+                    2 to "Cập nhật app"
                 )
                 tabs.forEach { (idx, title) ->
                     val active = selectedTab == idx
@@ -194,18 +200,19 @@ fun StudioSettingsBottomSheet(
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Text(
                                 text = title,
                                 style = MaterialTheme.typography.labelLarge,
-                                fontSize = 13.sp,
-                                color = if (active) ElectricCyan else TextSecondary
+                                fontSize = 12.sp,
+                                color = if (active) ElectricCyan else TextSecondary,
+                                maxLines = 1
                             )
-                            if (idx == 1 && releaseInfo?.isNewerThanCurrent == true) {
+                            if (idx == 2 && releaseInfo?.isNewerThanCurrent == true) {
                                 Box(
                                     modifier = Modifier
-                                        .size(7.dp)
+                                        .size(6.dp)
                                         .clip(CircleShape)
                                         .background(EmeraldBadge)
                                 )
@@ -217,8 +224,9 @@ fun StudioSettingsBottomSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (selectedTab == 0) {
-                // TAB 0: Quality & Download Preferences
+            when (selectedTab) {
+                0 -> {
+                    // TAB 0: Quality & Download Preferences
                 Text(
                     text = "Chất lượng Video mặc định",
                     style = MaterialTheme.typography.titleMedium,
@@ -355,10 +363,128 @@ fun StudioSettingsBottomSheet(
                         )
                     }
                 }
-            } else {
-                // TAB 1: App Update & GitHub CI/CD (Version 1.0.2 & Gradle 9.3.1)
-                val targetVersion = releaseInfo?.versionTag ?: GitHubAutoUpdater.TARGET_UPDATE_VERSION
-                val isUpToDate = releaseInfo?.isNewerThanCurrent == false || currentVersionName == targetVersion
+                }
+                1 -> {
+                    // TAB 1: TikTok Shortcut in-App & Hands-Free Auto-Scroll
+                    Text(
+                        text = "Phím tắt trong TikTok & Tự động chuyển video",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 14.sp,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingSwitchItem(
+                        title = "Bong bóng phím tắt nổi trong TikTok",
+                        subtitle = "Hiển thị nút nổi trên màn hình TikTok để tải nhanh không cần rời app",
+                        checked = settings.floatingShortcutEnabled,
+                        onCheckedChange = onToggleFloatingShortcut
+                    )
+
+                    SettingSwitchItem(
+                        title = "Tự động chuyển video sau khi tải",
+                        subtitle = "Màn hình tự động vuốt sang video tiếp theo ngay khi video được tải xong",
+                        checked = settings.autoSwipeAfterDownload,
+                        onCheckedChange = onToggleAutoSwipeAfterDownload
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Độ trễ trước khi chuyển video",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        listOf(0 to "Ngay lập tức", 1 to "1 giây (Mặc định)", 2 to "2 giây").forEach { (sec, label) ->
+                            val sel = settings.swipeDelaySeconds == sec
+                            Surface(
+                                onClick = { onSelectSwipeDelaySeconds(sec) },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (sel) ElectricCyan.copy(alpha = 0.15f) else StudioElevatedSurface,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (sel) ElectricCyan else StudioCardBorder),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (sel) ElectricCyan else TextSecondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+                    HorizontalDivider(color = StudioCardBorder)
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    Text(
+                        text = "Chế độ Lướt Video Tự Động (Rảnh tay)",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 14.sp,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Chu kỳ thời gian lướt sang video tiếp theo",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        listOf(5 to "5s", 8 to "8s", 10 to "10s", 15 to "15s", 30 to "30s").forEach { (interval, label) ->
+                            val sel = settings.autoScrollIntervalSeconds == interval
+                            Surface(
+                                onClick = { onSelectAutoScrollInterval(interval) },
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (sel) EmeraldBadge.copy(alpha = 0.18f) else StudioElevatedSurface,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, if (sel) EmeraldBadge else StudioCardBorder),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(vertical = 8.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = label,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (sel) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (sel) EmeraldBadge else TextSecondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    SettingSwitchItem(
+                        title = "Tự động tải khi lướt video",
+                        subtitle = "Tải toàn bộ video được lướt qua về máy Full HD không logo",
+                        checked = settings.autoDownloadOnScroll,
+                        onCheckedChange = onToggleAutoDownloadOnScroll
+                    )
+                }
+                else -> {
+                    // TAB 2: App Update & GitHub Releases (Version 1.0.2 & Gradle 9.3.1)
+                    val targetVersion = releaseInfo?.versionTag ?: GitHubAutoUpdater.TARGET_UPDATE_VERSION
+                    val isUpToDate = releaseInfo?.isNewerThanCurrent == false || currentVersionName == targetVersion
 
                 Column(
                     modifier = Modifier
@@ -594,6 +720,7 @@ fun StudioSettingsBottomSheet(
                     onCheckedChange = onToggleAutoCheckUpdate
                 )
             }
+        }
         }
     }
 }

@@ -26,6 +26,8 @@ import com.example.data.preferences.StudioSettings
 import com.example.data.update.ApkUpdateDownloadProgress
 import com.example.data.update.GitHubAutoUpdater
 import com.example.data.update.GitHubReleaseInfo
+import com.example.service.FloatingTikTokShortcutService
+import com.example.service.TikAutoScrollAccessibilityService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -66,7 +68,11 @@ data class StudioUiState(
     val isCheckingGitHubUpdate: Boolean = false,
     val apkUpdateDownloadProgress: ApkUpdateDownloadProgress? = null,
     val isUpdateBannerDismissed: Boolean = false,
-    val isGitHubWorkflowDialogOpen: Boolean = false
+    val isGitHubWorkflowDialogOpen: Boolean = false,
+    val isFloatingShortcutActive: Boolean = false,
+    val isAccessibilityServiceActive: Boolean = false,
+    val isAutoScrolling: Boolean = false,
+    val autoScrollCountdown: Int = 10
 )
 
 class TikStudioViewModel(
@@ -157,6 +163,18 @@ class TikStudioViewModel(
     init {
         // Automatically check GitHub Releases for a newer APK build on app open
         checkForGitHubUpdates(isStartupCheck = true)
+
+        viewModelScope.launch {
+            TikAutoScrollAccessibilityService.autoScrollState.collect { autoState ->
+                _uiState.update {
+                    it.copy(
+                        isAutoScrolling = autoState.isAutoScrolling,
+                        autoScrollCountdown = autoState.countdownRemaining,
+                        isAccessibilityServiceActive = TikAutoScrollAccessibilityService.isServiceActive
+                    )
+                }
+            }
+        }
     }
 
     fun onUrlInputChange(newValue: String) {
@@ -1058,6 +1076,83 @@ class TikStudioViewModel(
                 )
             }
         }
+    }
+
+    fun refreshServicesStatus(context: Context) {
+        val overlayActive = FloatingTikTokShortcutService.isRunning
+        val accessibilityActive = TikAutoScrollAccessibilityService.isAccessibilitySettingsEnabled(context)
+        _uiState.update {
+            it.copy(
+                isFloatingShortcutActive = overlayActive,
+                isAccessibilityServiceActive = accessibilityActive
+            )
+        }
+    }
+
+    fun toggleFloatingShortcut(context: Context): Boolean {
+        val hasOverlay = FloatingTikTokShortcutService.canDrawOverlays(context)
+        if (!hasOverlay) {
+            return false
+        }
+        if (FloatingTikTokShortcutService.isRunning) {
+            FloatingTikTokShortcutService.stop(context)
+            _uiState.update { it.copy(isFloatingShortcutActive = false) }
+            viewModelScope.launch { preferencesRepository.updateFloatingShortcutEnabled(false) }
+        } else {
+            FloatingTikTokShortcutService.start(context)
+            _uiState.update { it.copy(isFloatingShortcutActive = true) }
+            viewModelScope.launch { preferencesRepository.updateFloatingShortcutEnabled(true) }
+        }
+        return true
+    }
+
+    fun toggleAutoScroll() {
+        TikAutoScrollAccessibilityService.toggleHandsFreeAutoScroll(
+            settings.value.autoScrollIntervalSeconds
+        )
+    }
+
+    fun triggerNextVideoSwipe() {
+        TikAutoScrollAccessibilityService.swipeToNextVideo()
+    }
+
+    fun updateAutoSwipeAfterDownload(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.updateAutoSwipeAfterDownload(enabled) }
+    }
+
+    fun updateSwipeDelaySeconds(seconds: Int) {
+        viewModelScope.launch { preferencesRepository.updateSwipeDelaySeconds(seconds) }
+    }
+
+    fun updateAutoScrollInterval(seconds: Int) {
+        viewModelScope.launch { preferencesRepository.updateAutoScrollIntervalSeconds(seconds) }
+    }
+
+    fun updateAutoDownloadOnScroll(enabled: Boolean) {
+        viewModelScope.launch { preferencesRepository.updateAutoDownloadOnScroll(enabled) }
+    }
+
+    fun launchTikTokApp(context: Context) {
+        val tiktokPackages = listOf(
+            "com.zhiliaoapp.musically",
+            "com.ss.android.ugc.trill",
+            "com.ss.android.ugc.aweme"
+        )
+        val pm = context.packageManager
+        for (pkg in tiktokPackages) {
+            val launchIntent = pm.getLaunchIntentForPackage(pkg)
+            if (launchIntent != null) {
+                if (FloatingTikTokShortcutService.canDrawOverlays(context)) {
+                    FloatingTikTokShortcutService.start(context)
+                }
+                context.startActivity(launchIntent)
+                return
+            }
+        }
+        try {
+            val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse("https://www.tiktok.com"))
+            context.startActivity(webIntent)
+        } catch (_: Exception) {}
     }
 
     class Factory(

@@ -56,8 +56,10 @@ import com.example.ui.components.MediaInspectorCard
 import com.example.ui.components.StudioMediaPreviewDialog
 import com.example.ui.components.StudioSettingsBottomSheet
 import com.example.ui.components.StudioTopHeader
+import com.example.ui.components.TikTokShortcutFeatureSection
 import com.example.ui.components.UrlCommandInputCard
 import com.example.ui.components.VaultHeaderAndFilterRow
+import com.example.ui.components.requestOverlayPermission
 import com.example.ui.theme.ElectricCyan
 import com.example.ui.theme.EmeraldBadge
 import com.example.ui.theme.EmeraldBadgeBg
@@ -232,6 +234,36 @@ fun TikStudioMainScreen(
                     )
                 }
 
+                // 3.5. TikTok Shortcut in-App & Hands-Free Auto-Scroll Feature Card
+                item(key = "tiktok_shortcut_feature") {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    TikTokShortcutFeatureSection(
+                        settings = settings,
+                        isFloatingShortcutActive = uiState.isFloatingShortcutActive,
+                        isAccessibilityActive = uiState.isAccessibilityServiceActive,
+                        isAutoScrolling = uiState.isAutoScrolling,
+                        autoScrollCountdown = uiState.autoScrollCountdown,
+                        onToggleFloatingShortcut = {
+                            val success = viewModel.toggleFloatingShortcut(context)
+                            if (!success) {
+                                requestOverlayPermission(context)
+                            }
+                        },
+                        onToggleAutoScroll = {
+                            viewModel.toggleAutoScroll()
+                        },
+                        onTestSwipeNext = {
+                            viewModel.triggerNextVideoSwipe()
+                        },
+                        onLaunchTikTok = {
+                            viewModel.launchTikTokApp(context)
+                        },
+                        onOpenSettingsTab = {
+                            viewModel.openSettingsSheet(1)
+                        }
+                    )
+                }
+
                 // 4. Dynamic Media Inspector Card + Creator Toolkit (Cover HD, MP3 320k, Hashtags, Viral Script)
                 uiState.inspectedMedia?.let { media ->
                     item(key = "media_inspector_${media.id}") {
@@ -337,7 +369,17 @@ fun TikStudioMainScreen(
             onInstallReadyApk = { viewModel.installReadyApk() },
             onCopyWorkflowYaml = { yaml ->
                 copyTextToClipboard(context, yaml)
-            }
+            },
+            onToggleFloatingShortcut = {
+                val success = viewModel.toggleFloatingShortcut(context)
+                if (!success) {
+                    requestOverlayPermission(context)
+                }
+            },
+            onToggleAutoSwipeAfterDownload = { viewModel.updateAutoSwipeAfterDownload(it) },
+            onSelectSwipeDelaySeconds = { viewModel.updateSwipeDelaySeconds(it) },
+            onSelectAutoScrollInterval = { viewModel.updateAutoScrollInterval(it) },
+            onToggleAutoDownloadOnScroll = { viewModel.updateAutoDownloadOnScroll(it) }
         )
     }
 

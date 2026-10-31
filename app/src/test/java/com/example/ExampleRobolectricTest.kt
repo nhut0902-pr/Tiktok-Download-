@@ -111,14 +111,33 @@ class ExampleRobolectricTest {
         composeTestRule.onNodeWithTag("url_thumbnail_preview")
             .assertIsDisplayed()
 
-        // Open unified Settings button and switch to Update & GitHub tab
+        // Open unified Settings button and switch to Update tab (tab index 2)
         composeTestRule.onNodeWithTag("settings_button")
             .performClick()
         composeTestRule.waitForIdle()
-        composeTestRule.onNodeWithTag("settings_tab_1")
+        composeTestRule.onNodeWithTag("settings_tab_2")
             .performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("github_workflow_dialog")
             .assertIsDisplayed()
+    }
+
+    @Test
+    fun `displays TikTok in-app shortcut and auto-scroll feature controls`() {
+        composeTestRule.onNodeWithTag("tiktok_shortcut_feature_card")
+            .assertExists()
+        composeTestRule.onNodeWithTag("toggle_floating_shortcut_button")
+            .assertExists()
+        composeTestRule.onNodeWithTag("launch_tiktok_app_button")
+            .assertExists()
+        composeTestRule.onNodeWithTag("toggle_auto_scroll_button")
+            .assertExists()
+        composeTestRule.onNodeWithTag("test_swipe_next_button")
+            .assertExists()
+
+        // Verify tapping test swipe next triggers gesture handler safely
+        composeTestRule.onNodeWithTag("test_swipe_next_button")
+            .performClick()
+        composeTestRule.waitForIdle()
     }
 }

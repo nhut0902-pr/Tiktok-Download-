@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         checkClipboardForTikTokUrl()
+        viewModel.refreshServicesStatus(this)
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

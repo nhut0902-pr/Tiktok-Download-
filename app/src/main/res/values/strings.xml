@@ -12,4 +12,9 @@
     <string name="empty_vault_title">Chưa có video hoặc ảnh nào</string>
     <string name="empty_vault_subtitle">Dán liên kết TikTok ở trên hoặc chọn link mẫu để tải video Full HD không logo và bộ ảnh chất lượng gốc.</string>
     <string name="settings_title">Tuỳ chỉnh chất lượng &amp; Tải xuống</string>
+    <string name="accessibility_service_name">TikStudio HD - Tự động lướt &amp; Chuyển video TikTok</string>
+    <string name="accessibility_service_description">Cho phép TikStudio HD tự động vuốt chuyển video trên TikTok khi bấm phím tắt tải nhanh hoặc khi bật chế độ lướt video rảnh tay.</string>
+    <string name="floating_service_notification_channel">Phím tắt TikTok &amp; Tự động lướt</string>
+    <string name="floating_service_notification_title">TikStudio HD • Phím tắt TikTok đang chạy</string>
+    <string name="floating_service_notification_text">Nhấn vào phím tắt nổi trong TikTok để tải nhanh và tự động chuyển video.</string>
 </resources>

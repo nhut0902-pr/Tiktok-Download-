@@ -49,7 +49,12 @@ data class StudioSettings(
     val fileNamingRule: FileNamingRule = FileNamingRule.AUTHOR_ID_QUALITY,
     val githubRepoSlug: String = DEFAULT_GITHUB_REPO,
     val autoCheckGitHubUpdate: Boolean = true,
-    val appliedUpdateVersion: String = ""
+    val appliedUpdateVersion: String = "",
+    val floatingShortcutEnabled: Boolean = false,
+    val autoSwipeAfterDownload: Boolean = true,
+    val swipeDelaySeconds: Int = 1,
+    val autoScrollIntervalSeconds: Int = 10,
+    val autoDownloadOnScroll: Boolean = false
 )
 
 class StudioPreferencesRepository(private val context: Context) {
@@ -72,6 +77,11 @@ class StudioPreferencesRepository(private val context: Context) {
         val GITHUB_REPO_SLUG = stringPreferencesKey("github_repo_slug")
         val AUTO_CHECK_GITHUB_UPDATE = booleanPreferencesKey("auto_check_github_update")
         val APPLIED_UPDATE_VERSION = stringPreferencesKey("applied_update_version")
+        val FLOATING_SHORTCUT_ENABLED = booleanPreferencesKey("floating_shortcut_enabled")
+        val AUTO_SWIPE_AFTER_DOWNLOAD = booleanPreferencesKey("auto_swipe_after_download")
+        val SWIPE_DELAY_SECONDS = androidx.datastore.preferences.core.intPreferencesKey("swipe_delay_seconds")
+        val AUTO_SCROLL_INTERVAL_SECONDS = androidx.datastore.preferences.core.intPreferencesKey("auto_scroll_interval_seconds")
+        val AUTO_DOWNLOAD_ON_SCROLL = booleanPreferencesKey("auto_download_on_scroll")
     }
 
     val settingsFlow: Flow<StudioSettings> = context.studioDataStore.data.map { prefs ->
@@ -95,7 +105,12 @@ class StudioPreferencesRepository(private val context: Context) {
             githubRepoSlug = effectiveRepo,
             autoCheckGitHubUpdate = prefs[Keys.AUTO_CHECK_GITHUB_UPDATE] ?: true,
             appliedUpdateVersion = prefs[Keys.APPLIED_UPDATE_VERSION]
-                ?: syncPrefs.getString("applied_update_version", "").orEmpty()
+                ?: syncPrefs.getString("applied_update_version", "").orEmpty(),
+            floatingShortcutEnabled = prefs[Keys.FLOATING_SHORTCUT_ENABLED] ?: false,
+            autoSwipeAfterDownload = prefs[Keys.AUTO_SWIPE_AFTER_DOWNLOAD] ?: true,
+            swipeDelaySeconds = prefs[Keys.SWIPE_DELAY_SECONDS] ?: 1,
+            autoScrollIntervalSeconds = prefs[Keys.AUTO_SCROLL_INTERVAL_SECONDS] ?: 10,
+            autoDownloadOnScroll = prefs[Keys.AUTO_DOWNLOAD_ON_SCROLL] ?: false
         )
     }
 
@@ -158,5 +173,25 @@ class StudioPreferencesRepository(private val context: Context) {
 
     suspend fun updateAutoCheckGitHubUpdate(enabled: Boolean) {
         context.studioDataStore.edit { it[Keys.AUTO_CHECK_GITHUB_UPDATE] = enabled }
+    }
+
+    suspend fun updateFloatingShortcutEnabled(enabled: Boolean) {
+        context.studioDataStore.edit { it[Keys.FLOATING_SHORTCUT_ENABLED] = enabled }
+    }
+
+    suspend fun updateAutoSwipeAfterDownload(enabled: Boolean) {
+        context.studioDataStore.edit { it[Keys.AUTO_SWIPE_AFTER_DOWNLOAD] = enabled }
+    }
+
+    suspend fun updateSwipeDelaySeconds(seconds: Int) {
+        context.studioDataStore.edit { it[Keys.SWIPE_DELAY_SECONDS] = seconds }
+    }
+
+    suspend fun updateAutoScrollIntervalSeconds(seconds: Int) {
+        context.studioDataStore.edit { it[Keys.AUTO_SCROLL_INTERVAL_SECONDS] = seconds }
+    }
+
+    suspend fun updateAutoDownloadOnScroll(enabled: Boolean) {
+        context.studioDataStore.edit { it[Keys.AUTO_DOWNLOAD_ON_SCROLL] = enabled }
     }
 }
