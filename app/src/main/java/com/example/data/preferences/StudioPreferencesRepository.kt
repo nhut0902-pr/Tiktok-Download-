@@ -38,6 +38,8 @@ enum class FileNamingRule(val id: String, val label: String, val example: String
     }
 }
 
+const val DEFAULT_GITHUB_REPO = "nhut0902-pr/Tiktok-Download-"
+
 data class StudioSettings(
     val defaultQualityTier: VideoQualityTier = VideoQualityTier.FULL_HD_1080P,
     val forceNoWatermark: Boolean = true,
@@ -45,12 +47,16 @@ data class StudioSettings(
     val saveToPublicGallery: Boolean = true,
     val includeMp3WithCarousel: Boolean = true,
     val fileNamingRule: FileNamingRule = FileNamingRule.AUTHOR_ID_QUALITY,
-    val githubRepoSlug: String = "lamminhnhut/TikStudio-HD",
+    val githubRepoSlug: String = DEFAULT_GITHUB_REPO,
     val autoCheckGitHubUpdate: Boolean = true,
     val appliedUpdateVersion: String = ""
 )
 
 class StudioPreferencesRepository(private val context: Context) {
+
+    companion object {
+        const val DEFAULT_GITHUB_REPO = com.example.data.preferences.DEFAULT_GITHUB_REPO
+    }
 
     private val syncPrefs by lazy {
         context.getSharedPreferences("tikstudio_update_sync", Context.MODE_PRIVATE)
@@ -69,6 +75,12 @@ class StudioPreferencesRepository(private val context: Context) {
     }
 
     val settingsFlow: Flow<StudioSettings> = context.studioDataStore.data.map { prefs ->
+        val storedRepo = prefs[Keys.GITHUB_REPO_SLUG]
+        val effectiveRepo = if (storedRepo.isNullOrBlank() || storedRepo == "lamminhnhut/TikStudio-HD") {
+            DEFAULT_GITHUB_REPO
+        } else {
+            storedRepo
+        }
         StudioSettings(
             defaultQualityTier = VideoQualityTier.fromId(
                 prefs[Keys.DEFAULT_QUALITY] ?: VideoQualityTier.FULL_HD_1080P.id
@@ -80,7 +92,7 @@ class StudioPreferencesRepository(private val context: Context) {
             fileNamingRule = FileNamingRule.fromId(
                 prefs[Keys.FILE_NAMING_RULE] ?: FileNamingRule.AUTHOR_ID_QUALITY.id
             ),
-            githubRepoSlug = prefs[Keys.GITHUB_REPO_SLUG] ?: "lamminhnhut/TikStudio-HD",
+            githubRepoSlug = effectiveRepo,
             autoCheckGitHubUpdate = prefs[Keys.AUTO_CHECK_GITHUB_UPDATE] ?: true,
             appliedUpdateVersion = prefs[Keys.APPLIED_UPDATE_VERSION]
                 ?: syncPrefs.getString("applied_update_version", "").orEmpty()

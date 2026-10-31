@@ -65,30 +65,20 @@ class GitHubAutoUpdater(private val context: Context) {
             .removeSuffix(".git")
             .trim('/')
         val parts = trimmed.split("/").filter { it.isNotBlank() }
-        return if (parts.size >= 2) {
+        val slug = if (parts.size >= 2) {
             "${parts[0]}/${parts[1]}"
         } else {
-            trimmed.ifBlank { "lamminhnhut/TikStudio-HD" }
+            trimmed
         }
+        return if (slug.isBlank() || slug == "lamminhnhut/TikStudio-HD") DEFAULT_GITHUB_REPO else slug
     }
 
     /**
-     * Normalizes version tag so release version is cleanly formatted (e.g., "1.0.2")
-     * and maps any legacy workflow run number tag (such as 1.0.18) to "1.0.2".
+     * Normalizes version tag so release version is cleanly formatted (e.g., "1.0.3" from "v1.0.3").
      */
     fun normalizeVersionTag(rawTag: String): String {
         val stripped = rawTag.trim().removePrefix("v").removePrefix("V").trim()
-        if (stripped.isBlank() || stripped == "1.0.18") {
-            return TARGET_UPDATE_VERSION
-        }
-        val parts = stripped.split(".")
-        if (parts.size == 3 && parts[0] == "1" && parts[1] == "0") {
-            val patch = parts[2].toIntOrNull() ?: 2
-            if (patch > 2) {
-                return TARGET_UPDATE_VERSION
-            }
-        }
-        return stripped
+        return stripped.ifBlank { TARGET_UPDATE_VERSION }
     }
 
     /**
@@ -408,7 +398,8 @@ class GitHubAutoUpdater(private val context: Context) {
     }
 
     companion object {
-        const val TARGET_UPDATE_VERSION = "1.0.2"
+        const val DEFAULT_GITHUB_REPO = "nhut0902-pr/Tiktok-Download-"
+        const val TARGET_UPDATE_VERSION = "1.0.3"
 
         const val WORKFLOW_YAML_TEMPLATE = """name: Build APK & Auto Publish GitHub Release
 

@@ -877,8 +877,12 @@ class TikStudioViewModel(
             if (isStartupCheck && !currentSettings.autoCheckGitHubUpdate) return@launch
 
             val effectiveVersion = preferencesRepository.getEffectiveVersionName(BuildConfig.VERSION_NAME)
-            val targetRepo = (repoOverride ?: currentSettings.githubRepoSlug)
-                .ifBlank { "lamminhnhut/TikStudio-HD" }
+            val rawRepo = if (!repoOverride.isNullOrBlank()) repoOverride else currentSettings.githubRepoSlug
+            val targetRepo = if (rawRepo.isBlank() || rawRepo == "lamminhnhut/TikStudio-HD") {
+                GitHubAutoUpdater.DEFAULT_GITHUB_REPO
+            } else {
+                rawRepo
+            }
             if (!repoOverride.isNullOrBlank()) {
                 preferencesRepository.updateGitHubRepoSlug(targetRepo)
             }

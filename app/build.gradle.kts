@@ -16,8 +16,10 @@ android {
     applicationId = "com.aistudio.tikstudiohd.vqxkpl"
     minSdk = 24
     targetSdk = 36
-    val propVersionCode = project.findProperty("versionCode")?.toString()?.toIntOrNull() ?: 1
-    val propVersionName = project.findProperty("versionName")?.toString() ?: "1.0.1"
+    val versionFile = rootProject.file("version.txt")
+    val fileVersion = if (versionFile.exists()) versionFile.readText().trim() else "1.0.3"
+    val propVersionCode = project.findProperty("versionCode")?.toString()?.toIntOrNull() ?: 3
+    val propVersionName = project.findProperty("versionName")?.toString() ?: fileVersion
     versionCode = propVersionCode
     versionName = propVersionName
 
