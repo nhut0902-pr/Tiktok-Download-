@@ -29,9 +29,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.DynamicFeed
 import androidx.compose.material.icons.filled.HighQuality
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayCircleFilled
+import androidx.compose.material.icons.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoFile
@@ -40,6 +43,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -61,6 +65,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.example.data.model.BatchQueueProgress
 import com.example.data.model.SampleTikTokLink
 import com.example.data.model.ValidatedThumbnailPreview
 import com.example.ui.theme.ElectricCyan
@@ -146,7 +151,7 @@ fun StudioTopHeader(
                     }
                 }
                 Text(
-                    text = "Tải Video & Ảnh TikTok Full HD",
+                    text = "Tải Video, Ảnh Bìa & Hàng Loạt Full HD",
                     style = MaterialTheme.typography.bodyMedium,
                     fontSize = 12.sp,
                     color = TextSecondary
@@ -191,16 +196,23 @@ fun UrlCommandInputCard(
     urlInput: String,
     isUrlValid: Boolean,
     validatedThumbnailPreview: ValidatedThumbnailPreview?,
+    isBatchModeExpanded: Boolean,
+    batchInputText: String,
+    batchQueueProgress: BatchQueueProgress?,
     isInspecting: Boolean,
-    sampleLinks: List<SampleTikTokLink>,
+    sampleLinks: List<SampleTikTokLink> = emptyList(),
     statusMessage: String?,
     isStatusError: Boolean,
     onUrlChange: (String) -> Unit,
     onClearUrl: () -> Unit,
     onPasteClick: () -> Unit,
     onAnalyzeClick: () -> Unit,
-    onSelectSample: (SampleTikTokLink) -> Unit,
+    onSelectSample: (SampleTikTokLink) -> Unit = {},
     onThumbnailPreviewClick: () -> Unit,
+    onDownloadCoverClick: () -> Unit,
+    onToggleBatchMode: () -> Unit,
+    onBatchInputChange: (String) -> Unit,
+    onStartBatchDownload: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -212,21 +224,45 @@ fun UrlCommandInputCard(
             .border(1.dp, StudioCardBorder, RoundedCornerShape(22.dp))
             .padding(16.dp)
     ) {
-        // Minimal Input Header + URL Valid Badge
-        if (isUrlValid) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(bottom = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        // Mode Switcher Bar: Single Link vs Batch Multi-Link Queue + URL Valid Badge
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Surface(
+                onClick = onToggleBatchMode,
+                shape = RoundedCornerShape(8.dp),
+                color = if (isBatchModeExpanded) ElectricCyan.copy(alpha = 0.16f) else StudioElevatedSurface,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    if (isBatchModeExpanded) ElectricCyan else StudioCardBorder
+                ),
+                modifier = Modifier.testTag("batch_mode_button")
             ) {
-                Text(
-                    text = "Đã nhận diện liên kết TikTok",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontSize = 12.sp,
-                    color = TextSecondary
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DynamicFeed,
+                        contentDescription = null,
+                        tint = if (isBatchModeExpanded) ElectricCyan else TextSecondary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = if (isBatchModeExpanded) "Đang bật Tải hàng loạt" else "Tải hàng loạt (Batch)",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isBatchModeExpanded) ElectricCyan else TextSecondary
+                    )
+                }
+            }
+
+            if (isUrlValid) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -297,13 +333,114 @@ fun UrlCommandInputCard(
             )
         )
 
-        // Immediate Coil Thumbnail Preview shown right after URL validation
+        // Immediate Coil Thumbnail Preview shown right after URL validation + 1-Tap Save HD Cover
         if (isUrlValid && validatedThumbnailPreview != null) {
             Spacer(modifier = Modifier.height(10.dp))
             ValidatedUrlThumbnailPreviewBox(
                 preview = validatedThumbnailPreview,
-                onPreviewClick = onThumbnailPreviewClick
+                onPreviewClick = onThumbnailPreviewClick,
+                onDownloadCoverClick = onDownloadCoverClick
             )
+        }
+
+        // Expandable Batch Multi-Link Queue Downloader
+        AnimatedVisibility(visible = isBatchModeExpanded) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(StudioElevatedSurface)
+                    .border(1.dp, ElectricCyan.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                    .padding(12.dp)
+                    .testTag("batch_queue_panel")
+            ) {
+                Text(
+                    text = "Hàng đợi tải nhiều link cùng lúc (Mỗi dòng 1 link TikTok)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ElectricCyan
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = batchInputText,
+                    onValueChange = onBatchInputChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(104.dp)
+                        .testTag("batch_input_field"),
+                    placeholder = {
+                        Text(
+                            text = "https://vt.tiktok.com/...\nhttps://www.tiktok.com/@user/video/...",
+                            fontSize = 11.sp,
+                            color = TextMuted
+                        )
+                    },
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        fontFamily = JetBrainsMonoFamily,
+                        fontSize = 11.sp,
+                        color = TextPrimary
+                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = StudioBackground,
+                        unfocusedContainerColor = StudioBackground,
+                        focusedBorderColor = ElectricCyan,
+                        unfocusedBorderColor = StudioCardBorder
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (batchQueueProgress != null) {
+                    val frac = (batchQueueProgress.currentIndex.toFloat() / batchQueueProgress.totalLinks.coerceAtLeast(1))
+                        .coerceIn(0.05f, 1f)
+                    Text(
+                        text = batchQueueProgress.statusText,
+                        fontFamily = JetBrainsMonoFamily,
+                        fontSize = 11.sp,
+                        color = GoldBadge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LinearProgressIndicator(
+                        progress = { frac },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(6.dp)
+                            .clip(RoundedCornerShape(3.dp)),
+                        color = EmeraldBadge,
+                        trackColor = StudioBackground
+                    )
+                } else {
+                    Button(
+                        onClick = onStartBatchDownload,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = EmeraldBadge,
+                            contentColor = Color(0xFF001F24)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("start_batch_download_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.PlaylistAddCheck,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Tải toàn bộ danh sách (Full HD Không Logo)",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -385,64 +522,6 @@ fun UrlCommandInputCard(
             }
         }
 
-        // Minimal Sample Pills
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Mẫu thử:",
-                style = MaterialTheme.typography.bodyMedium,
-                fontSize = 11.sp,
-                color = TextMuted
-            )
-            sampleLinks.forEachIndexed { index, sample ->
-                val isSelected = urlInput == sample.url
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(
-                            if (isSelected) ElectricCyan.copy(alpha = 0.14f)
-                            else StudioElevatedSurface
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (isSelected) ElectricCyan.copy(alpha = 0.6f) else StudioCardBorder,
-                            shape = RoundedCornerShape(8.dp)
-                        )
-                        .clickable { onSelectSample(sample) }
-                        .padding(horizontal = 9.dp, vertical = 5.dp)
-                        .testTag("sample_chip_$index")
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(5.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (sample.isPhotoCarousel) {
-                                Icons.Filled.PhotoLibrary
-                            } else {
-                                Icons.Filled.VideoFile
-                            },
-                            contentDescription = null,
-                            tint = if (sample.isPhotoCarousel) NeonCoral else ElectricCyan,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Text(
-                            text = sample.label,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = if (isSelected) ElectricCyan else TextSecondary
-                        )
-                    }
-                }
-            }
-        }
 
         // Subtle Status Feedback
         AnimatedVisibility(
@@ -480,12 +559,14 @@ fun UrlCommandInputCard(
 }
 
 /**
- * Compact, refined Coil thumbnail preview displayed immediately after URL validation.
+ * Compact, refined Coil thumbnail preview displayed immediately after URL validation,
+ * including a 1-tap HD Cover Saver button.
  */
 @Composable
 fun ValidatedUrlThumbnailPreviewBox(
     preview: ValidatedThumbnailPreview,
     onPreviewClick: () -> Unit,
+    onDownloadCoverClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -595,6 +676,34 @@ fun ValidatedUrlThumbnailPreviewBox(
                 fontSize = 10.sp,
                 color = ElectricCyan
             )
+        }
+
+        // 1-Tap Save HD Cover Image Button
+        Surface(
+            onClick = onDownloadCoverClick,
+            shape = RoundedCornerShape(8.dp),
+            color = StudioSurface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, ElectricCyan.copy(alpha = 0.45f)),
+            modifier = Modifier.testTag("quick_save_cover_button")
+        ) {
+            Column(
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Image,
+                    contentDescription = "Lưu ảnh bìa HD",
+                    tint = ElectricCyan,
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "Lưu bìa",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ElectricCyan
+                )
+            }
         }
     }
 }

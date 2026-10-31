@@ -51,10 +51,18 @@ class ExampleRobolectricTest {
         assertNotNull(immediatePreview)
         assertTrue(immediatePreview!!.coverImageUrl.isNotBlank())
 
-        // Verify Full HD 1080p & HD 720p No-Watermark stream resolution
+        // Verify Full HD 1080p & HD 720p No-Watermark stream resolution + Hashtag/Viral script extraction
         val videoInfo = repo.inspectTikTokUrl("https://www.tiktok.com/@cinema.vietnam/video/7398451029384719632").getOrThrow()
         assertTrue(videoInfo.streams.any { it.tier == VideoQualityTier.FULL_HD_1080P && it.tier.isNoWatermark })
         assertTrue(videoInfo.streams.any { it.tier == VideoQualityTier.HD_720P && it.tier.isNoWatermark })
+        assertTrue(videoInfo.extractedHashtags.isNotEmpty())
+        assertTrue(videoInfo.buildViralRepostCaption().contains(videoInfo.authorHandle))
+
+        // Verify Batch Multi-Link URL extraction
+        val batchUrls = repo.extractAllTikTokUrls(
+            "Link 1: https://vt.tiktok.com/ZS8N9vK2p/\nLink 2: https://www.tiktok.com/@cinema.vietnam/video/7398451029384719632"
+        )
+        assertEquals(2, batchUrls.size)
 
         // Verify GitHub version 1.0.2 comparison and Gradle 9.3.1 in workflow template
         val updater = GitHubAutoUpdater(context)

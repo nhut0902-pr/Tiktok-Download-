@@ -20,15 +20,23 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.FolderSpecial
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -46,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.data.local.DownloadItemEntity
+import com.example.data.model.VaultStorageSummary
 import com.example.ui.theme.ElectricCyan
 import com.example.ui.theme.EmeraldBadge
 import com.example.ui.theme.EmeraldBadgeBg
@@ -65,16 +74,20 @@ import com.example.util.FormatUtils
 @Composable
 fun VaultHeaderAndFilterRow(
     totalCount: Int,
+    storageSummary: VaultStorageSummary,
     selectedFilter: String,
+    searchQuery: String,
     onSelectFilter: (String) -> Unit,
+    onSearchQueryChange: (String) -> Unit,
     onClearAll: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val filters = listOf(
         "ALL" to "Tất cả ($totalCount)",
-        "VIDEO" to "Video HD",
-        "PHOTO" to "Ảnh Không Logo",
-        "AUDIO" to "Nhạc MP3"
+        "FAVORITE" to "★ Yêu thích (${storageSummary.favoriteCount})",
+        "VIDEO" to "Video HD (${storageSummary.videoCount})",
+        "PHOTO" to "Ảnh (${storageSummary.photoCount})",
+        "AUDIO" to "MP3 (${storageSummary.audioCount})"
     )
 
     Column(
@@ -118,6 +131,97 @@ fun VaultHeaderAndFilterRow(
             }
         }
 
+        // Storage & Bandwidth Telemetry Pill
+        if (totalCount > 0) {
+            Spacer(modifier = Modifier.height(6.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(StudioSurface)
+                    .border(1.dp, StudioCardBorder, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 12.dp, vertical = 7.dp)
+                    .testTag("vault_storage_stats"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Storage,
+                        contentDescription = null,
+                        tint = EmeraldBadge,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "Dung lượng đã lưu: ${FormatUtils.formatFileSize(storageSummary.totalBytes)}",
+                        fontFamily = JetBrainsMonoFamily,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = EmeraldBadge
+                    )
+                }
+                Text(
+                    text = "${storageSummary.videoCount} Video • ${storageSummary.photoCount} Ảnh • ${storageSummary.audioCount} MP3",
+                    fontFamily = JetBrainsMonoFamily,
+                    fontSize = 10.sp,
+                    color = TextSecondary
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Live Search Input inside Vault
+        OutlinedTextField(
+            value = searchQuery,
+            onValueChange = onSearchQueryChange,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("vault_search_input"),
+            placeholder = {
+                Text(
+                    text = "Tìm kiếm theo tên video, @tác_giả hoặc chất lượng...",
+                    fontSize = 12.sp,
+                    color = TextMuted
+                )
+            },
+            leadingIcon = {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = null,
+                    tint = ElectricCyan,
+                    modifier = Modifier.size(18.dp)
+                )
+            },
+            trailingIcon = {
+                if (searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { onSearchQueryChange("") }) {
+                        Icon(
+                            imageVector = Icons.Filled.Clear,
+                            contentDescription = "Xoá tìm kiếm",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                fontSize = 12.sp,
+                color = TextPrimary
+            ),
+            shape = RoundedCornerShape(12.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = StudioSurface,
+                unfocusedContainerColor = StudioSurface,
+                focusedBorderColor = ElectricCyan,
+                unfocusedBorderColor = StudioCardBorder
+            )
+        )
+
         Spacer(modifier = Modifier.height(8.dp))
 
         Row(
@@ -155,6 +259,8 @@ fun VaultHeaderAndFilterRow(
 fun DownloadedVaultItemCard(
     item: DownloadItemEntity,
     onPreviewClick: (DownloadItemEntity) -> Unit,
+    onToggleFavoriteClick: (DownloadItemEntity) -> Unit,
+    onReInspectClick: (DownloadItemEntity) -> Unit,
     onShareClick: (DownloadItemEntity) -> Unit,
     onDeleteClick: (Long) -> Unit,
     modifier: Modifier = Modifier
@@ -260,13 +366,76 @@ fun DownloadedVaultItemCard(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "${item.authorHandle} • ${item.resolution} • ${FormatUtils.formatFileSize(item.fileSizeBytes)} • ${FormatUtils.formatRelativeTime(item.createdAt)}",
+                text = "${item.authorHandle} • ${item.resolution} • ${FormatUtils.formatFileSize(item.fileSizeBytes)}",
                 fontFamily = JetBrainsMonoFamily,
                 fontSize = 10.sp,
                 color = TextSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            // Quick Action Chips: Favorite + Re-Inspect + Share + Delete
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Surface(
+                    onClick = { onToggleFavoriteClick(item) },
+                    shape = RoundedCornerShape(7.dp),
+                    color = if (item.isFavorite) NeonCoral.copy(alpha = 0.16f) else StudioElevatedSurface,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (item.isFavorite) NeonCoral else StudioCardBorder
+                    ),
+                    modifier = Modifier.testTag("favorite_item_${item.id}")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = if (item.isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = "Yêu thích",
+                            tint = if (item.isFavorite) NeonCoral else TextSecondary,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = if (item.isFavorite) "Đã lưu" else "Thích",
+                            fontSize = 10.sp,
+                            color = if (item.isFavorite) NeonCoral else TextSecondary
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = { onReInspectClick(item) },
+                    shape = RoundedCornerShape(7.dp),
+                    color = StudioElevatedSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
+                    modifier = Modifier.testTag("reinspect_item_${item.id}")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Replay,
+                            contentDescription = "Tải lại định dạng khác",
+                            tint = ElectricCyan,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "Tải lại",
+                            fontSize = 10.sp,
+                            color = ElectricCyan
+                        )
+                    }
+                }
+            }
         }
 
         // Action Buttons (Share + Delete)
@@ -277,27 +446,27 @@ fun DownloadedVaultItemCard(
             IconButton(
                 onClick = { onShareClick(item) },
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(38.dp)
                     .testTag("share_item_${item.id}")
             ) {
                 Icon(
                     imageVector = Icons.Filled.Share,
                     contentDescription = "Chia sẻ tệp",
                     tint = ElectricCyan,
-                    modifier = Modifier.size(19.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
             IconButton(
                 onClick = { onDeleteClick(item.id) },
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(38.dp)
                     .testTag("delete_item_${item.id}")
             ) {
                 Icon(
                     imageVector = Icons.Filled.DeleteOutline,
                     contentDescription = "Xoá tệp",
                     tint = NeonCoral,
-                    modifier = Modifier.size(19.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
         }
@@ -341,7 +510,7 @@ fun EmptyVaultPlaceholder(
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Chọn chất lượng Full HD 1080p hoặc HD 720p ở bảng điều khiển phía trên rồi nhấn 'Tải' để lưu video và bộ ảnh không logo về thiết bị.",
+            text = "Chọn chất lượng Full HD 1080p, Ảnh Bìa HD hoặc Tải hàng loạt ở trên rồi nhấn 'Tải' để lưu video và bộ ảnh không logo về thiết bị.",
             style = MaterialTheme.typography.bodyMedium,
             color = TextMuted,
             textAlign = TextAlign.Center

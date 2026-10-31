@@ -118,9 +118,6 @@ fun StudioSettingsBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedTab by remember(initialTab) { mutableIntStateOf(initialTab) }
-    var repoInput by remember(settings.githubRepoSlug) { mutableStateOf(settings.githubRepoSlug) }
-    var showYamlCode by remember { mutableStateOf(false) }
-    var yamlCopied by remember { mutableStateOf(false) }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -181,7 +178,7 @@ fun StudioSettingsBottomSheet(
             ) {
                 val tabs = listOf(
                     0 to "Chất lượng tải",
-                    1 to "Cập nhật & GitHub"
+                    1 to "Cập nhật ứng dụng"
                 )
                 tabs.forEach { (idx, title) ->
                     val active = selectedTab == idx
@@ -556,182 +553,46 @@ fun StudioSettingsBottomSheet(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Repository Configuration
-                Text(
-                    text = "Kho lưu trữ GitHub (owner/repo)",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontSize = 14.sp,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    onClick = { onCheckLatestRelease("") },
+                    shape = RoundedCornerShape(12.dp),
+                    color = StudioElevatedSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ElectricCyan.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("check_github_release_button")
                 ) {
-                    OutlinedTextField(
-                        value = repoInput,
-                        onValueChange = {
-                            repoInput = it
-                            onUpdateRepoSlug(it)
-                        },
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .testTag("github_repo_input"),
-                        placeholder = {
-                            Text("VD: user/Tiktok-Download-", fontSize = 12.sp)
-                        },
-                        singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            fontFamily = JetBrainsMonoFamily,
-                            fontSize = 12.sp,
-                            color = TextPrimary
-                        ),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = StudioElevatedSurface,
-                            unfocusedContainerColor = StudioElevatedSurface,
-                            focusedBorderColor = ElectricCyan,
-                            unfocusedBorderColor = StudioCardBorder
-                        )
-                    )
-
-                    Surface(
-                        onClick = { onCheckLatestRelease(repoInput) },
-                        shape = RoundedCornerShape(10.dp),
-                        color = StudioElevatedSurface,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, ElectricCyan.copy(alpha = 0.5f)),
-                        modifier = Modifier
-                            .height(52.dp)
-                            .testTag("check_github_release_button")
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp),
+                        horizontalArrangement = Arrangement.Center,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Refresh,
-                                contentDescription = "Kiểm tra",
-                                tint = ElectricCyan,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = if (isCheckingUpdate) "..." else "Kiểm tra",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = ElectricCyan
-                            )
-                        }
+                        Icon(
+                            imageVector = Icons.Filled.Refresh,
+                            contentDescription = "Kiểm tra",
+                            tint = ElectricCyan,
+                            modifier = Modifier.size(17.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = if (isCheckingUpdate) "Đang kiểm tra cập nhật..." else "Kiểm tra bản cập nhật mới",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ElectricCyan
+                        )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                SettingSwitchItem(
-                    title = "Tự động báo khi có bản Release mới",
-                    subtitle = "Kiểm tra GitHub Releases mỗi khi khởi động ứng dụng",
-                    checked = settings.autoCheckGitHubUpdate,
-                    onCheckedChange = onToggleAutoCheckUpdate
-                )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Expandable Workflow YAML Guide (Fixed for Gradle 9.3.1 & JDK 21)
-                Surface(
-                    onClick = { showYamlCode = !showYamlCode },
-                    shape = RoundedCornerShape(12.dp),
-                    color = StudioElevatedSurface,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Code,
-                                    contentDescription = null,
-                                    tint = GoldBadge,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Column {
-                                    Text(
-                                        text = "Workflow GitHub Actions (Chuẩn Gradle 9.3.1)",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = TextPrimary
-                                    )
-                                    Text(
-                                        text = ".github/workflows/android-release.yml • Nhấn để xem/copy",
-                                        fontFamily = JetBrainsMonoFamily,
-                                        fontSize = 10.sp,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-
-                            Surface(
-                                onClick = {
-                                    onCopyWorkflowYaml(GitHubAutoUpdater.WORKFLOW_YAML_TEMPLATE)
-                                    yamlCopied = true
-                                },
-                                shape = RoundedCornerShape(8.dp),
-                                color = if (yamlCopied) EmeraldBadgeBg else StudioSurface,
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    if (yamlCopied) EmeraldBadge else ElectricCyan
-                                ),
-                                modifier = Modifier.testTag("copy_workflow_yaml_button")
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.ContentCopy,
-                                        contentDescription = null,
-                                        tint = if (yamlCopied) EmeraldBadge else ElectricCyan,
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Text(
-                                        text = if (yamlCopied) "Đã copy" else "Copy",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (yamlCopied) EmeraldBadge else ElectricCyan
-                                    )
-                                }
-                            }
-                        }
-
-                        if (showYamlCode) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(StudioBackground)
-                                    .padding(10.dp)
-                            ) {
-                                Text(
-                                    text = GitHubAutoUpdater.WORKFLOW_YAML_TEMPLATE,
-                                    fontFamily = JetBrainsMonoFamily,
-                                    fontSize = 10.sp,
-                                    lineHeight = 14.sp,
-                                    color = Color(0xFFA7F3D0)
-                                )
-                            }
-                        }
-                    }
-                }
+                SettingSwitchItem(
+                    title = "Tự động thông báo khi có bản cập nhật mới",
+                    subtitle = "Kiểm tra phiên bản mới mỗi khi khởi động ứng dụng",
+                    checked = settings.autoCheckGitHubUpdate,
+                    onCheckedChange = onToggleAutoCheckUpdate
+                )
             }
         }
     }

@@ -11,10 +11,12 @@ import com.example.BuildConfig
 import com.example.data.local.DownloadHistoryDao
 import com.example.data.local.DownloadItemEntity
 import com.example.data.model.ActiveDownloadProgress
+import com.example.data.model.BatchQueueProgress
 import com.example.data.model.CustomDownloadOptions
 import com.example.data.model.SampleTikTokLink
 import com.example.data.model.TikTokMediaInfo
 import com.example.data.model.ValidatedThumbnailPreview
+import com.example.data.model.VaultStorageSummary
 import com.example.data.model.VideoQualityTier
 import com.example.data.network.MediaDownloadEngine
 import com.example.data.network.TikTokExtractorRepository
@@ -43,6 +45,9 @@ data class StudioUiState(
     val urlInput: String = "",
     val isUrlValid: Boolean = false,
     val validatedThumbnailPreview: ValidatedThumbnailPreview? = null,
+    val isBatchModeExpanded: Boolean = false,
+    val batchInputText: String = "",
+    val batchQueueProgress: BatchQueueProgress? = null,
     val isInspecting: Boolean = false,
     val inspectedMedia: TikTokMediaInfo? = null,
     val customOptions: CustomDownloadOptions = CustomDownloadOptions(),
@@ -50,7 +55,8 @@ data class StudioUiState(
     val activeDownload: ActiveDownloadProgress? = null,
     val statusMessage: String? = null,
     val isStatusError: Boolean = false,
-    val selectedVaultFilter: String = "ALL", // "ALL", "VIDEO", "PHOTO", "AUDIO"
+    val selectedVaultFilter: String = "ALL", // "ALL", "FAVORITE", "VIDEO", "PHOTO", "AUDIO"
+    val vaultSearchQuery: String = "",
     val isSettingsSheetOpen: Boolean = false,
     val settingsInitialTab: Int = 0,
     val previewTarget: PreviewModalTarget? = null,
@@ -97,11 +103,23 @@ class TikStudioViewModel(
         allDownloads,
         _uiState
     ) { items, state ->
-        when (state.selectedVaultFilter) {
+        val byCategory = when (state.selectedVaultFilter) {
+            "FAVORITE" -> items.filter { it.isFavorite }
             "VIDEO" -> items.filter { it.mediaType == "VIDEO" }
             "PHOTO" -> items.filter { it.mediaType == "PHOTO" }
             "AUDIO" -> items.filter { it.mediaType == "AUDIO" }
             else -> items
+        }
+        val query = state.vaultSearchQuery.trim().lowercase()
+        if (query.isBlank()) {
+            byCategory
+        } else {
+            byCategory.filter { item ->
+                item.title.lowercase().contains(query) ||
+                    item.authorName.lowercase().contains(query) ||
+                    item.authorHandle.lowercase().contains(query) ||
+                    item.qualityLabel.lowercase().contains(query)
+            }
         }
     }.stateIn(
         scope = viewModelScope,
@@ -117,15 +135,26 @@ class TikStudioViewModel(
         initialValue = 0
     )
 
+    val vaultStorageSummary: StateFlow<VaultStorageSummary> = combine(allDownloads) { arr ->
+        val list = arr[0]
+        VaultStorageSummary(
+            totalFiles = list.size,
+            totalBytes = list.sumOf { it.fileSizeBytes },
+            videoCount = list.count { it.mediaType == "VIDEO" },
+            photoCount = list.count { it.mediaType == "PHOTO" },
+            audioCount = list.count { it.mediaType == "AUDIO" },
+            favoriteCount = list.count { it.isFavorite }
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = VaultStorageSummary()
+    )
+
     private var lastAutoDetectedClipboardUrl: String? = null
     private var lastAutoInspectedValidatedUrl: String? = null
 
     init {
-        // Pre-load the studio showcase inspector card while keeping urlInput clean for clipboard auto-paste
-        val firstSample = extractorRepository.sampleLinks.firstOrNull()
-        if (firstSample != null) {
-            analyzeUrl(firstSample.url, silentStatus = true, updateUrlField = false)
-        }
         // Automatically check GitHub Releases for a newer APK build on app open
         checkForGitHubUpdates(isStartupCheck = true)
     }
@@ -519,6 +548,207 @@ class TikStudioViewModel(
 
     fun selectVaultFilter(filter: String) {
         _uiState.update { it.copy(selectedVaultFilter = filter) }
+    }
+
+    fun onVaultSearchQueryChange(query: String) {
+        _uiState.update { it.copy(vaultSearchQuery = query) }
+    }
+
+    fun toggleFavoriteDownload(item: DownloadItemEntity) {
+        viewModelScope.launch {
+            val nextFav = !item.isFavorite
+            downloadDao.setFavorite(item.id, nextFav)
+            _uiState.update {
+                it.copy(
+                    statusMessage = if (nextFav) {
+                        "Đã thêm vào danh sách Yêu thích ★"
+                    } else {
+                        "Đã bỏ đánh dấu Yêu thích."
+                    },
+                    isStatusError = false
+                )
+            }
+        }
+    }
+
+    fun reInspectSavedItem(item: DownloadItemEntity) {
+        val url = item.sourceTikTokUrl.ifBlank { return }
+        onUrlInputChange(url)
+        analyzeUrl(url)
+    }
+
+    fun downloadCoverThumbnailHd() {
+        val state = _uiState.value
+        val media = state.inspectedMedia ?: return
+        if (state.activeDownload != null) return
+
+        viewModelScope.launch {
+            val res = downloadEngine.downloadVideoCoverHd(
+                media = media,
+                settings = settings.value,
+                customPrefix = state.customOptions.customFilePrefix,
+                onProgress = { progress ->
+                    _uiState.update { it.copy(activeDownload = progress) }
+                }
+            )
+            res.fold(
+                onSuccess = { saved ->
+                    _uiState.update {
+                        it.copy(
+                            activeDownload = null,
+                            statusMessage = "Đã lưu Ảnh Bìa HD Không Logo (${saved.resolution}) vào Kho lưu trữ & Thư viện!",
+                            isStatusError = false
+                        )
+                    }
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(
+                            activeDownload = null,
+                            statusMessage = "Không thể tải ảnh bìa: ${err.message}",
+                            isStatusError = true
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    fun downloadQuickAudioMp3() {
+        val state = _uiState.value
+        val media = state.inspectedMedia ?: return
+        if (state.activeDownload != null) return
+        val audioStream = media.streams.find { it.tier == VideoQualityTier.AUDIO_MP3 } ?: return
+
+        viewModelScope.launch {
+            val res = downloadEngine.downloadVideoOrAudio(
+                media = media,
+                stream = audioStream,
+                settings = settings.value,
+                customPrefix = state.customOptions.customFilePrefix,
+                onProgress = { progress ->
+                    _uiState.update { it.copy(activeDownload = progress) }
+                }
+            )
+            res.fold(
+                onSuccess = {
+                    _uiState.update {
+                        it.copy(
+                            activeDownload = null,
+                            statusMessage = "Đã tách & lưu Nhạc nền MP3 320kbps (${media.musicTitle})!",
+                            isStatusError = false
+                        )
+                    }
+                },
+                onFailure = { err ->
+                    _uiState.update {
+                        it.copy(
+                            activeDownload = null,
+                            statusMessage = "Lỗi tải nhạc MP3: ${err.message}",
+                            isStatusError = true
+                        )
+                    }
+                }
+            )
+        }
+    }
+
+    fun notifyCopiedToClipboard(label: String) {
+        _uiState.update {
+            it.copy(
+                statusMessage = "Đã sao chép $label vào bộ nhớ tạm!",
+                isStatusError = false
+            )
+        }
+    }
+
+    fun toggleBatchMode() {
+        _uiState.update {
+            it.copy(
+                isBatchModeExpanded = !it.isBatchModeExpanded
+            )
+        }
+    }
+
+    fun onBatchInputChange(text: String) {
+        _uiState.update { it.copy(batchInputText = text) }
+    }
+
+    fun startBatchDownload() {
+        val rawBatch = _uiState.value.batchInputText
+        val urls = extractorRepository.extractAllTikTokUrls(rawBatch)
+        if (urls.isEmpty()) {
+            _uiState.update {
+                it.copy(
+                    statusMessage = "Chưa tìm thấy liên kết TikTok hợp lệ trong danh sách tải hàng loạt.",
+                    isStatusError = true
+                )
+            }
+            return
+        }
+        if (_uiState.value.batchQueueProgress != null || _uiState.value.activeDownload != null) return
+
+        viewModelScope.launch {
+            val currentSettings = settings.value
+            var successCount = 0
+
+            urls.forEachIndexed { idx, url ->
+                val step = idx + 1
+                _uiState.update {
+                    it.copy(
+                        batchQueueProgress = BatchQueueProgress(
+                            currentIndex = step,
+                            totalLinks = urls.size,
+                            currentUrl = url,
+                            completedCount = successCount,
+                            statusText = "Đang tải hàng loạt ($step/${urls.size}): $url"
+                        )
+                    )
+                }
+
+                val mediaRes = extractorRepository.inspectTikTokUrl(url)
+                mediaRes.getOrNull()?.let { media ->
+                    if (media.isPhotoSlideshow) {
+                        val r = downloadEngine.downloadPhotoCarousel(
+                            media = media,
+                            selectedPhotos = media.photos,
+                            includeAudioMp3 = currentSettings.includeMp3WithCarousel,
+                            settings = currentSettings,
+                            customPrefix = "Batch",
+                            onProgress = { p ->
+                                _uiState.update { it.copy(activeDownload = p) }
+                            }
+                        )
+                        if (r.isSuccess) successCount++
+                    } else {
+                        val stream = media.streams.find { it.tier == currentSettings.defaultQualityTier }
+                            ?: media.streams.firstOrNull()
+                        if (stream != null) {
+                            val r = downloadEngine.downloadVideoOrAudio(
+                                media = media,
+                                stream = stream,
+                                settings = currentSettings,
+                                customPrefix = "Batch",
+                                onProgress = { p ->
+                                    _uiState.update { it.copy(activeDownload = p) }
+                                }
+                            )
+                            if (r.isSuccess) successCount++
+                        }
+                    }
+                }
+            }
+
+            _uiState.update {
+                it.copy(
+                    activeDownload = null,
+                    batchQueueProgress = null,
+                    isBatchModeExpanded = false,
+                    statusMessage = "Hoàn tất tải hàng loạt $successCount/${urls.size} liên kết TikTok Không Logo!",
+                    isStatusError = false
+                )
+            }
+        }
     }
 
     fun deleteDownloadItem(id: Long) {

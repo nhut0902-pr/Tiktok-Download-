@@ -50,7 +50,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.BuildConfig
 import com.example.ui.components.DownloadedVaultItemCard
 import com.example.ui.components.EmptyVaultPlaceholder
 import com.example.ui.components.MediaInspectorCard
@@ -79,6 +78,7 @@ fun TikStudioMainScreen(
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val filteredDownloads by viewModel.filteredDownloads.collectAsStateWithLifecycle()
     val totalCount by viewModel.totalDownloadsCount.collectAsStateWithLifecycle()
+    val storageSummary by viewModel.vaultStorageSummary.collectAsStateWithLifecycle()
 
     // Automatically detect and paste TikTok URL from clipboard when screen opens or resumes
     DisposableEffect(lifecycleOwner, settings.autoDetectClipboard) {
@@ -144,7 +144,7 @@ fun TikStudioMainScreen(
                     )
                 }
 
-                // 2. Compact 1-Line Update Notification Pill (Opens Settings -> Update Tab)
+                // 2. Compact 1-Line Update Notification Pill (Only shown when version 1.0.2 is not yet applied)
                 val releaseInfo = uiState.githubReleaseInfo
                 if (releaseInfo != null && releaseInfo.isNewerThanCurrent && !uiState.isUpdateBannerDismissed) {
                     item(key = "github_update_banner") {
@@ -204,15 +204,17 @@ fun TikStudioMainScreen(
                     }
                 }
 
-                // 3. URL & Clipboard Command Bar + Instant Coil Thumbnail Preview
+                // 3. URL & Clipboard Command Bar + Instant Coil Thumbnail Preview + Batch Queue Downloader
                 item(key = "url_command_bar") {
                     Spacer(modifier = Modifier.height(6.dp))
                     UrlCommandInputCard(
                         urlInput = uiState.urlInput,
                         isUrlValid = uiState.isUrlValid,
                         validatedThumbnailPreview = uiState.validatedThumbnailPreview,
+                        isBatchModeExpanded = uiState.isBatchModeExpanded,
+                        batchInputText = uiState.batchInputText,
+                        batchQueueProgress = uiState.batchQueueProgress,
                         isInspecting = uiState.isInspecting,
-                        sampleLinks = uiState.sampleLinks,
                         statusMessage = uiState.statusMessage,
                         isStatusError = uiState.isStatusError,
                         onUrlChange = { viewModel.onUrlInputChange(it) },
@@ -222,12 +224,15 @@ fun TikStudioMainScreen(
                             viewModel.onPasteAndAnalyze(clipText)
                         },
                         onAnalyzeClick = { viewModel.analyzeUrl() },
-                        onSelectSample = { viewModel.onSelectSampleLink(it) },
-                        onThumbnailPreviewClick = { viewModel.openLivePreview(0) }
+                        onThumbnailPreviewClick = { viewModel.openLivePreview(0) },
+                        onDownloadCoverClick = { viewModel.downloadCoverThumbnailHd() },
+                        onToggleBatchMode = { viewModel.toggleBatchMode() },
+                        onBatchInputChange = { viewModel.onBatchInputChange(it) },
+                        onStartBatchDownload = { viewModel.startBatchDownload() }
                     )
                 }
 
-                // 4. Dynamic Media Inspector Card (Video 1080p/720p/MP3 or Photo Carousel)
+                // 4. Dynamic Media Inspector Card + Creator Toolkit (Cover HD, MP3 320k, Hashtags, Viral Script)
                 uiState.inspectedMedia?.let { media ->
                     item(key = "media_inspector_${media.id}") {
                         Spacer(modifier = Modifier.height(14.dp))
@@ -246,7 +251,22 @@ fun TikStudioMainScreen(
                             onUpdateCustomPrefix = { viewModel.updateCustomFilePrefix(it) },
                             onCopyDirectUrl = { url ->
                                 copyTextToClipboard(context, url)
+                                viewModel.notifyCopiedToClipboard("đường dẫn luồng gốc")
                             },
+                            onCopyCaption = { caption ->
+                                copyTextToClipboard(context, caption)
+                                viewModel.notifyCopiedToClipboard("Caption gốc")
+                            },
+                            onCopyHashtags = { hashtags ->
+                                copyTextToClipboard(context, hashtags)
+                                viewModel.notifyCopiedToClipboard("bộ Hashtag")
+                            },
+                            onCopyViralScript = { script ->
+                                copyTextToClipboard(context, script)
+                                viewModel.notifyCopiedToClipboard("mẫu Caption & Hashtag Reup")
+                            },
+                            onDownloadCoverHd = { viewModel.downloadCoverThumbnailHd() },
+                            onDownloadQuickMp3 = { viewModel.downloadQuickAudioMp3() },
                             onOpenLivePreview = { photoIdx ->
                                 viewModel.openLivePreview(photoIdx)
                             },
@@ -255,13 +275,16 @@ fun TikStudioMainScreen(
                     }
                 }
 
-                // 5. Recent Downloads Vault Header & Filter Chips
+                // 5. Recent Downloads Vault Header, Storage Analytics, Search & Filter Chips
                 item(key = "vault_header") {
                     Spacer(modifier = Modifier.height(20.dp))
                     VaultHeaderAndFilterRow(
                         totalCount = totalCount,
+                        storageSummary = storageSummary,
                         selectedFilter = uiState.selectedVaultFilter,
+                        searchQuery = uiState.vaultSearchQuery,
                         onSelectFilter = { viewModel.selectVaultFilter(it) },
+                        onSearchQueryChange = { viewModel.onVaultSearchQueryChange(it) },
                         onClearAll = { viewModel.clearAllDownloads() }
                     )
                     Spacer(modifier = Modifier.height(8.dp))
@@ -280,6 +303,8 @@ fun TikStudioMainScreen(
                         DownloadedVaultItemCard(
                             item = item,
                             onPreviewClick = { viewModel.openSavedDownloadPreview(it) },
+                            onToggleFavoriteClick = { viewModel.toggleFavoriteDownload(it) },
+                            onReInspectClick = { viewModel.reInspectSavedItem(it) },
                             onShareClick = { viewModel.shareDownloadedFile(context, it) },
                             onDeleteClick = { viewModel.deleteDownloadItem(it) }
                         )

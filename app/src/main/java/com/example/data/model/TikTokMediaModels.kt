@@ -88,7 +88,32 @@ data class TikTokMediaInfo(
     val streams: List<QualityStreamOption>,
     val photos: List<PhotoSlideItem>,
     val sourceEngine: String
-)
+) {
+    val extractedHashtags: List<String>
+        get() {
+            val regex = Regex("#[\\p{L}0-9_]+")
+            val found = regex.findAll(title).map { it.value }.distinct().toList()
+            return if (found.isNotEmpty()) {
+                found
+            } else {
+                listOf("#tiktokvn", "#xuhuong", "#fyp", "#fullhd", "#trending")
+            }
+        }
+
+    fun buildViralRepostCaption(): String {
+        val cleanTitle = title.replace(Regex("#[\\p{L}0-9_]+"), "").trim()
+        val tags = (extractedHashtags + listOf("#xuhuong", "#fyp", "#viral")).distinct().joinToString(" ")
+        return buildString {
+            if (cleanTitle.isNotBlank()) {
+                appendLine(cleanTitle)
+                appendLine()
+            }
+            appendLine("🎬 Nguồn: $authorName ($authorHandle)")
+            appendLine("🎵 Nhạc nền: $musicTitle - $musicAuthor")
+            append(tags)
+        }
+    }
+}
 
 data class CustomDownloadOptions(
     val selectedTier: VideoQualityTier = VideoQualityTier.FULL_HD_1080P,
@@ -106,6 +131,23 @@ data class ActiveDownloadProgress(
     val totalBytes: Long,
     val speedKbps: Int,
     val statusText: String
+)
+
+data class BatchQueueProgress(
+    val currentIndex: Int,
+    val totalLinks: Int,
+    val currentUrl: String,
+    val completedCount: Int,
+    val statusText: String
+)
+
+data class VaultStorageSummary(
+    val totalFiles: Int = 0,
+    val totalBytes: Long = 0L,
+    val videoCount: Int = 0,
+    val photoCount: Int = 0,
+    val audioCount: Int = 0,
+    val favoriteCount: Int = 0
 )
 
 data class SampleTikTokLink(
@@ -127,4 +169,3 @@ data class ValidatedThumbnailPreview(
     val photoCount: Int = 0,
     val resolutionBadge: String = "FULL HD 1080P • NO LOGO"
 )
-

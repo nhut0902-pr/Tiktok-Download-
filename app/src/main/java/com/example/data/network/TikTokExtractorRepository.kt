@@ -24,26 +24,7 @@ class TikTokExtractorRepository {
         .followSslRedirects(true)
         .build()
 
-    val sampleLinks: List<SampleTikTokLink> = listOf(
-        SampleTikTokLink(
-            label = "Video 1080p 60fps",
-            tag = "FULL HD • KHÔNG LOGO",
-            url = "https://www.tiktok.com/@cinema.vietnam/video/7398451029384719632",
-            isPhotoCarousel = false
-        ),
-        SampleTikTokLink(
-            label = "Bộ Ảnh Slideshow (4 ảnh)",
-            tag = "PHOTO MODE • HD",
-            url = "https://www.tiktok.com/@streetstyle.saigon/photo/7401928374651029811",
-            isPhotoCarousel = true
-        ),
-        SampleTikTokLink(
-            label = "Cảnh Đêm Neon & MP3",
-            tag = "1080P • AUDIO 320K",
-            url = "https://vt.tiktok.com/ZS8N9vK2p/",
-            isPhotoCarousel = false
-        )
-    )
+    val sampleLinks: List<SampleTikTokLink> = emptyList()
 
     /**
      * Extracts the first valid HTTP/HTTPS URL from any pasted share text,
@@ -86,6 +67,31 @@ class TikTokExtractorRepository {
     fun validateTikTokUrl(rawInput: String?): String? {
         if (rawInput.isNullOrBlank()) return null
         return extractTikTokUrlFromClipboard(rawInput)
+    }
+
+    /**
+     * Extracts all distinct TikTok/Douyin URLs from multi-line or batch text input.
+     */
+    fun extractAllTikTokUrls(rawBatchText: String?): List<String> {
+        if (rawBatchText.isNullOrBlank()) return emptyList()
+        val matcher = TIKTOK_CLIPBOARD_PATTERN.matcher(rawBatchText)
+        val urls = mutableListOf<String>()
+        while (matcher.find()) {
+            val matched = (matcher.group(0) ?: continue)
+                .trim()
+                .trimEnd('.', ',', ';', ')', ']', '"', '\'')
+            val normalized = if (matched.startsWith("http://", ignoreCase = true) ||
+                matched.startsWith("https://", ignoreCase = true)
+            ) {
+                matched
+            } else {
+                "https://$matched"
+            }
+            if (!urls.contains(normalized)) {
+                urls.add(normalized)
+            }
+        }
+        return urls
     }
 
     /**
@@ -504,176 +510,7 @@ class TikTokExtractorRepository {
     }
 
     private fun findPresetSample(url: String): TikTokMediaInfo? {
-        return when {
-            url.contains("7398451029384719632") -> TikTokMediaInfo(
-                id = "7398451029384719632",
-                originalUrl = url,
-                title = "Flycam bình minh trên vịnh Hạ Long & Đảo Cát Bà cực nét 1080p 60fps #halongbay #vietnam #cinematic #4k",
-                authorName = "Vietnam Cinema Lab",
-                authorHandle = "@cinema.vietnam",
-                authorAvatarUrl = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=240&auto=format&fit=crop&q=80",
-                coverUrl = "https://images.unsplash.com/photo-1528127269322-539801943592?w=900&auto=format&fit=crop&q=85",
-                durationSeconds = 15,
-                playCount = 1_482_900L,
-                likeCount = 194_300L,
-                musicTitle = "Original Cinematic Horizon - Vietnam Cinema Lab",
-                musicAuthor = "Vietnam Cinema Lab",
-                musicUrl = SAMPLE_AUDIO_URL,
-                isPhotoSlideshow = false,
-                streams = listOf(
-                    QualityStreamOption(
-                        tier = VideoQualityTier.FULL_HD_1080P,
-                        streamUrl = SAMPLE_VIDEO_1080P_URL,
-                        fileSizeBytes = 18_450_000L,
-                        bitrateKbps = 8200,
-                        fps = 60,
-                        codecLabel = "H.264 High@L4.2 • 1080p 60fps No Logo"
-                    ),
-                    QualityStreamOption(
-                        tier = VideoQualityTier.HD_720P,
-                        streamUrl = SAMPLE_VIDEO_720P_URL,
-                        fileSizeBytes = 8_920_000L,
-                        bitrateKbps = 4100,
-                        fps = 30,
-                        codecLabel = "H.264 Main • 720p 30fps No Logo"
-                    ),
-                    QualityStreamOption(
-                        tier = VideoQualityTier.AUDIO_MP3,
-                        streamUrl = SAMPLE_AUDIO_URL,
-                        fileSizeBytes = 2_450_000L,
-                        bitrateKbps = 320,
-                        fps = 0,
-                        codecLabel = "MP3 Stereo • 320kbps Original Sound"
-                    ),
-                    QualityStreamOption(
-                        tier = VideoQualityTier.WATERMARK_ORIGINAL,
-                        streamUrl = SAMPLE_VIDEO_720P_URL,
-                        fileSizeBytes = 7_600_000L,
-                        bitrateKbps = 3200,
-                        fps = 30,
-                        codecLabel = "H.264 • Có Watermark ID"
-                    )
-                ),
-                photos = emptyList(),
-                sourceEngine = "TikStudio Direct Stream 1080p"
-            )
-
-            url.contains("7401928374651029811") -> {
-                val slides = listOf(
-                    PhotoSlideItem(
-                        index = 0,
-                        imageUrl = "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=1080&auto=format&fit=crop&q=85",
-                        width = 1080,
-                        height = 1440,
-                        estimatedSizeBytes = 1_420_000L
-                    ),
-                    PhotoSlideItem(
-                        index = 1,
-                        imageUrl = "https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=1080&auto=format&fit=crop&q=85",
-                        width = 1080,
-                        height = 1440,
-                        estimatedSizeBytes = 1_380_000L
-                    ),
-                    PhotoSlideItem(
-                        index = 2,
-                        imageUrl = "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=1080&auto=format&fit=crop&q=85",
-                        width = 1080,
-                        height = 1440,
-                        estimatedSizeBytes = 1_560_000L
-                    ),
-                    PhotoSlideItem(
-                        index = 3,
-                        imageUrl = "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1080&auto=format&fit=crop&q=85",
-                        width = 1080,
-                        height = 1440,
-                        estimatedSizeBytes = 1_290_000L
-                    )
-                )
-                TikTokMediaInfo(
-                    id = "7401928374651029811",
-                    originalUrl = url,
-                    title = "Góc cafe & ẩm thực Sài Gòn cuối tuần bộ ảnh Film Look không dính logo #saigon #photomode #cafe #aesthetic",
-                    authorName = "Saigon Visuals",
-                    authorHandle = "@streetstyle.saigon",
-                    authorAvatarUrl = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=240&auto=format&fit=crop&q=80",
-                    coverUrl = slides.first().imageUrl,
-                    durationSeconds = 12,
-                    playCount = 620_400L,
-                    likeCount = 89_100L,
-                    musicTitle = "Lofi Saigon Morning (Original Mix)",
-                    musicAuthor = "Saigon Visuals",
-                    musicUrl = SAMPLE_AUDIO_URL,
-                    isPhotoSlideshow = true,
-                    streams = listOf(
-                        QualityStreamOption(
-                            tier = VideoQualityTier.AUDIO_MP3,
-                            streamUrl = SAMPLE_AUDIO_URL,
-                            fileSizeBytes = 1_980_000L,
-                            bitrateKbps = 320,
-                            fps = 0,
-                            codecLabel = "MP3 320kbps • Nhạc nền Slideshow"
-                        )
-                    ),
-                    photos = slides,
-                    sourceEngine = "TikStudio Photo Carousel Engine"
-                )
-            }
-
-            url.contains("ZS8N9vK2p") -> TikTokMediaInfo(
-                id = "7405192837461902344",
-                originalUrl = url,
-                title = "Cyberpunk Tokyo & Saigon Night Hyperlapse 1080p Full HD No Watermark #nightlife #hyperlapse #neon",
-                authorName = "Neon Motion Studio",
-                authorHandle = "@neon.motion",
-                authorAvatarUrl = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=240&auto=format&fit=crop&q=80",
-                coverUrl = "https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=900&auto=format&fit=crop&q=85",
-                durationSeconds = 18,
-                playCount = 2_310_000L,
-                likeCount = 412_800L,
-                musicTitle = "Midnight Synthwave Drive (320kbps)",
-                musicAuthor = "Neon Motion Studio",
-                musicUrl = SAMPLE_AUDIO_URL,
-                isPhotoSlideshow = false,
-                streams = listOf(
-                    QualityStreamOption(
-                        tier = VideoQualityTier.FULL_HD_1080P,
-                        streamUrl = SAMPLE_VIDEO_1080P_URL,
-                        fileSizeBytes = 22_800_000L,
-                        bitrateKbps = 8900,
-                        fps = 60,
-                        codecLabel = "H.264 High@L4.2 • 1080p 60fps No Logo"
-                    ),
-                    QualityStreamOption(
-                        tier = VideoQualityTier.HD_720P,
-                        streamUrl = SAMPLE_VIDEO_720P_URL,
-                        fileSizeBytes = 10_400_000L,
-                        bitrateKbps = 4200,
-                        fps = 30,
-                        codecLabel = "H.264 Main • 720p 30fps No Logo"
-                    ),
-                    QualityStreamOption(
-                        tier = VideoQualityTier.AUDIO_MP3,
-                        streamUrl = SAMPLE_AUDIO_URL,
-                        fileSizeBytes = 2_890_000L,
-                        bitrateKbps = 320,
-                        fps = 0,
-                        codecLabel = "MP3 Stereo • 320kbps"
-                    ),
-                    QualityStreamOption(
-                        tier = VideoQualityTier.WATERMARK_ORIGINAL,
-                        streamUrl = SAMPLE_VIDEO_720P_URL,
-                        fileSizeBytes = 9_100_000L,
-                        bitrateKbps = 3100,
-                        fps = 30,
-                        codecLabel = "H.264 • Có Logo"
-                    )
-                ),
-                photos = emptyList(),
-                sourceEngine = "TikStudio Direct Stream 1080p"
-            )
-
-            else -> null
-        }
+        return null
     }
 
     private fun buildSmartFallbackForUrl(cleanUrl: String): TikTokMediaInfo {

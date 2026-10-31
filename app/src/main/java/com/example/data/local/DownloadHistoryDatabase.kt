@@ -21,7 +21,7 @@ data class DownloadItemEntity(
     val authorHandle: String,
     val thumbnailUrl: String,
     val mediaType: String, // "VIDEO", "PHOTO", "AUDIO"
-    val qualityLabel: String, // "FULL HD 1080P", "HD 720P", "PHOTO HD", "MP3 320K"
+    val qualityLabel: String, // "FULL HD 1080P", "HD 720P", "ẢNH HD KHÔNG LOGO", "ẢNH BÌA HD", "MP3 320K"
     val resolution: String,
     val isNoWatermark: Boolean,
     val fileSizeBytes: Long,
@@ -29,6 +29,7 @@ data class DownloadItemEntity(
     val galleryUriString: String,
     val remoteStreamUrl: String,
     val sourceTikTokUrl: String,
+    val isFavorite: Boolean = false,
     val createdAt: Long = System.currentTimeMillis()
 )
 
@@ -40,6 +41,9 @@ interface DownloadHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDownload(item: DownloadItemEntity): Long
 
+    @Query("UPDATE download_items SET isFavorite = :isFavorite WHERE id = :id")
+    suspend fun setFavorite(id: Long, isFavorite: Boolean)
+
     @Query("DELETE FROM download_items WHERE id = :id")
     suspend fun deleteById(id: Long)
 
@@ -47,7 +51,7 @@ interface DownloadHistoryDao {
     suspend fun clearAll()
 }
 
-@Database(entities = [DownloadItemEntity::class], version = 1, exportSchema = false)
+@Database(entities = [DownloadItemEntity::class], version = 2, exportSchema = false)
 abstract class DownloadHistoryDatabase : RoomDatabase() {
     abstract fun downloadHistoryDao(): DownloadHistoryDao
 

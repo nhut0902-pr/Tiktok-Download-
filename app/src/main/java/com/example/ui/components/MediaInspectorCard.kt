@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,17 +19,22 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Audiotrack
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.Button
@@ -92,6 +98,11 @@ fun MediaInspectorCard(
     onToggleCustomOptionsExpanded: () -> Unit,
     onUpdateCustomPrefix: (String) -> Unit,
     onCopyDirectUrl: (String) -> Unit,
+    onCopyCaption: (String) -> Unit,
+    onCopyHashtags: (String) -> Unit,
+    onCopyViralScript: (String) -> Unit,
+    onDownloadCoverHd: () -> Unit,
+    onDownloadQuickMp3: () -> Unit,
     onOpenLivePreview: (Int) -> Unit,
     onStartDownload: () -> Unit,
     modifier: Modifier = Modifier
@@ -266,6 +277,18 @@ fun MediaInspectorCard(
             )
         }
 
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // 2B. Creator Toolkit Strip: Hashtags, Music MP3 320k, HD Cover Saver & Viral Script Copy
+        CreatorToolkitBar(
+            media = media,
+            onCopyCaption = { onCopyCaption(media.title) },
+            onCopyHashtags = { onCopyHashtags(media.extractedHashtags.joinToString(" ")) },
+            onCopyViralScript = { onCopyViralScript(media.buildViralRepostCaption()) },
+            onDownloadCoverHd = onDownloadCoverHd,
+            onDownloadQuickMp3 = onDownloadQuickMp3
+        )
+
         Spacer(modifier = Modifier.height(14.dp))
 
         // 3. Clean Quality Selector OR Photo Carousel Grid
@@ -418,6 +441,200 @@ fun MediaInspectorCard(
                             modifier = Modifier.size(19.dp)
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CreatorToolkitBar(
+    media: TikTokMediaInfo,
+    onCopyCaption: () -> Unit,
+    onCopyHashtags: () -> Unit,
+    onCopyViralScript: () -> Unit,
+    onDownloadCoverHd: () -> Unit,
+    onDownloadQuickMp3: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(StudioElevatedSurface)
+            .border(1.dp, StudioCardBorder, RoundedCornerShape(12.dp))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Music Info + Quick 1-Tap MP3 & Cover Saver
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.MusicNote,
+                    contentDescription = null,
+                    tint = NeonCoral,
+                    modifier = Modifier.size(15.dp)
+                )
+                Text(
+                    text = "${media.musicTitle} • ${media.musicAuthor}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 11.sp,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Surface(
+                    onClick = onDownloadCoverHd,
+                    shape = RoundedCornerShape(7.dp),
+                    color = StudioSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ElectricCyan.copy(alpha = 0.45f)),
+                    modifier = Modifier.testTag("download_cover_button")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Image,
+                            contentDescription = null,
+                            tint = ElectricCyan,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "Tải Ảnh Bìa",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ElectricCyan
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = onDownloadQuickMp3,
+                    shape = RoundedCornerShape(7.dp),
+                    color = StudioSurface,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonCoral.copy(alpha = 0.5f)),
+                    modifier = Modifier.testTag("quick_mp3_button")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Audiotrack,
+                            contentDescription = null,
+                            tint = NeonCoral,
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            text = "Tách MP3",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonCoral
+                        )
+                    }
+                }
+            }
+        }
+
+        // Extracted Hashtags & Quick Copy Actions (Caption / Hashtags / Viral Reup Script)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                onClick = onCopyCaption,
+                shape = RoundedCornerShape(7.dp),
+                color = StudioSurface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
+                modifier = Modifier.testTag("copy_caption_button")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.ContentCopy,
+                        contentDescription = null,
+                        tint = TextPrimary,
+                        modifier = Modifier.size(11.dp)
+                    )
+                    Text(
+                        text = "Copy Caption",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary
+                    )
+                }
+            }
+
+            Surface(
+                onClick = onCopyHashtags,
+                shape = RoundedCornerShape(7.dp),
+                color = StudioSurface,
+                border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
+                modifier = Modifier.testTag("copy_hashtags_button")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Tag,
+                        contentDescription = null,
+                        tint = GoldBadge,
+                        modifier = Modifier.size(11.dp)
+                    )
+                    Text(
+                        text = "Copy ${media.extractedHashtags.size} Hashtag",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = GoldBadge
+                    )
+                }
+            }
+
+            Surface(
+                onClick = onCopyViralScript,
+                shape = RoundedCornerShape(7.dp),
+                color = EmeraldBadgeBg,
+                border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldBadge.copy(alpha = 0.5f)),
+                modifier = Modifier.testTag("generate_viral_caption_button")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = EmeraldBadge,
+                        modifier = Modifier.size(11.dp)
+                    )
+                    Text(
+                        text = "Tạo mẫu đăng lại (Reup)",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = EmeraldBadge
+                    )
                 }
             }
         }
