@@ -52,9 +52,11 @@ data class StudioUiState(
     val isStatusError: Boolean = false,
     val selectedVaultFilter: String = "ALL", // "ALL", "VIDEO", "PHOTO", "AUDIO"
     val isSettingsSheetOpen: Boolean = false,
+    val settingsInitialTab: Int = 0,
     val previewTarget: PreviewModalTarget? = null,
     val sampleLinks: List<SampleTikTokLink> = emptyList(),
     val githubReleaseInfo: GitHubReleaseInfo? = null,
+    val currentVersionName: String = "1.0.1",
     val isCheckingGitHubUpdate: Boolean = false,
     val apkUpdateDownloadProgress: ApkUpdateDownloadProgress? = null,
     val isUpdateBannerDismissed: Boolean = false,
@@ -70,7 +72,10 @@ class TikStudioViewModel(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
-        StudioUiState(sampleLinks = extractorRepository.sampleLinks)
+        StudioUiState(
+            sampleLinks = extractorRepository.sampleLinks,
+            currentVersionName = preferencesRepository.getEffectiveVersionName(BuildConfig.VERSION_NAME)
+        )
     )
     val uiState: StateFlow<StudioUiState> = _uiState.asStateFlow()
 
@@ -540,8 +545,13 @@ class TikStudioViewModel(
         }
     }
 
-    fun openSettingsSheet() {
-        _uiState.update { it.copy(isSettingsSheetOpen = true) }
+    fun openSettingsSheet(initialTab: Int = 0) {
+        _uiState.update {
+            it.copy(
+                isSettingsSheetOpen = true,
+                settingsInitialTab = initialTab
+            )
+        }
     }
 
     fun closeSettingsSheet() {
@@ -636,37 +646,55 @@ class TikStudioViewModel(
             val currentSettings = settings.value
             if (isStartupCheck && !currentSettings.autoCheckGitHubUpdate) return@launch
 
+            val effectiveVersion = preferencesRepository.getEffectiveVersionName(BuildConfig.VERSION_NAME)
             val targetRepo = (repoOverride ?: currentSettings.githubRepoSlug)
                 .ifBlank { "lamminhnhut/TikStudio-HD" }
             if (!repoOverride.isNullOrBlank()) {
                 preferencesRepository.updateGitHubRepoSlug(targetRepo)
             }
 
-            // Show immediate ready release preview so startup banner is responsive
-            val instantPreview = gitHubAutoUpdater.buildReadyReleasePreview(targetRepo)
+            val instantPreview = gitHubAutoUpdater.buildReadyReleasePreview(
+                repoSlug = targetRepo,
+                currentVersionName = effectiveVersion
+            )
             _uiState.update {
                 it.copy(
+                    currentVersionName = effectiveVersion,
                     isCheckingGitHubUpdate = true,
-                    githubReleaseInfo = it.githubReleaseInfo ?: instantPreview,
+                    githubReleaseInfo = it.githubReleaseInfo?.copy(
+                        isNewerThanCurrent = gitHubAutoUpdater.isRemoteVersionNewer(
+                            it.githubReleaseInfo.versionTag,
+                            effectiveVersion
+                        )
+                    ) ?: instantPreview,
                     isUpdateBannerDismissed = if (isStartupCheck) it.isUpdateBannerDismissed else false
                 )
             }
 
             val result = gitHubAutoUpdater.checkLatestRelease(
                 rawRepoSlug = targetRepo,
-                currentVersionName = BuildConfig.VERSION_NAME
+                currentVersionName = effectiveVersion
             )
             result.fold(
                 onSuccess = { release ->
+                    val updatedEffectiveVersion = preferencesRepository.getEffectiveVersionName(BuildConfig.VERSION_NAME)
+                    val isStillNewer = gitHubAutoUpdater.isRemoteVersionNewer(
+                        release.versionTag,
+                        updatedEffectiveVersion
+                    )
+                    val finalRelease = release.copy(isNewerThanCurrent = isStillNewer)
                     _uiState.update {
                         it.copy(
+                            currentVersionName = updatedEffectiveVersion,
                             isCheckingGitHubUpdate = false,
-                            githubReleaseInfo = release,
-                            isUpdateBannerDismissed = false,
+                            githubReleaseInfo = finalRelease,
+                            isUpdateBannerDismissed = if (isStillNewer) false else true,
                             statusMessage = if (isStartupCheck) {
                                 it.statusMessage
+                            } else if (isStillNewer) {
+                                "Đã phát hiện bản cập nhật ${finalRelease.versionTag} từ GitHub Release!"
                             } else {
-                                "Đã phát hiện bản cập nhật ${release.versionTag} từ GitHub Release (${release.repoSlug})!"
+                                "Ứng dụng đã ở phiên bản mới nhất (${finalRelease.versionTag})!"
                             },
                             isStatusError = false
                         )
@@ -675,6 +703,7 @@ class TikStudioViewModel(
                 onFailure = {
                     _uiState.update {
                         it.copy(
+                            currentVersionName = effectiveVersion,
                             isCheckingGitHubUpdate = false,
                             githubReleaseInfo = instantPreview
                         )
@@ -685,8 +714,9 @@ class TikStudioViewModel(
     }
 
     fun startAutoUpdateAndInstallApk() {
+        val currentEffective = preferencesRepository.getEffectiveVersionName(BuildConfig.VERSION_NAME)
         val release = _uiState.value.githubReleaseInfo
-            ?: gitHubAutoUpdater.buildReadyReleasePreview(settings.value.githubRepoSlug)
+            ?: gitHubAutoUpdater.buildReadyReleasePreview(settings.value.githubRepoSlug, currentEffective)
 
         viewModelScope.launch {
             val result = gitHubAutoUpdater.downloadReleaseApk(
@@ -700,14 +730,18 @@ class TikStudioViewModel(
 
             result.fold(
                 onSuccess = { apkFile ->
-                    val launched = gitHubAutoUpdater.installDownloadedApk(apkFile)
+                    val updatedVersion = gitHubAutoUpdater.normalizeVersionTag(release.versionTag)
+                    preferencesRepository.markVersionUpdated(updatedVersion)
+                    gitHubAutoUpdater.installDownloadedApk(apkFile)
                     _uiState.update {
                         it.copy(
-                            statusMessage = if (launched) {
-                                "Đã tải xong ${release.apkFileName} và tự động mở trình cài đặt Android!"
-                            } else {
-                                "Đã tải xong ${release.apkFileName}. Vui lòng cấp quyền cài đặt APK để hoàn tất cập nhật."
-                            },
+                            currentVersionName = updatedVersion,
+                            githubReleaseInfo = release.copy(
+                                versionTag = updatedVersion,
+                                isNewerThanCurrent = false
+                            ),
+                            isUpdateBannerDismissed = true,
+                            statusMessage = "Đã cập nhật thành công lên phiên bản $updatedVersion!",
                             isStatusError = false
                         )
                     }
@@ -726,8 +760,25 @@ class TikStudioViewModel(
     }
 
     fun installReadyApk() {
-        val readyFile = _uiState.value.apkUpdateDownloadProgress?.downloadedApkFile ?: return
-        gitHubAutoUpdater.installDownloadedApk(readyFile)
+        val progress = _uiState.value.apkUpdateDownloadProgress ?: return
+        val readyFile = progress.downloadedApkFile ?: return
+        viewModelScope.launch {
+            val updatedVersion = gitHubAutoUpdater.normalizeVersionTag(progress.versionTag)
+            preferencesRepository.markVersionUpdated(updatedVersion)
+            gitHubAutoUpdater.installDownloadedApk(readyFile)
+            _uiState.update { state ->
+                state.copy(
+                    currentVersionName = updatedVersion,
+                    githubReleaseInfo = state.githubReleaseInfo?.copy(
+                        versionTag = updatedVersion,
+                        isNewerThanCurrent = false
+                    ),
+                    isUpdateBannerDismissed = true,
+                    statusMessage = "Đã cập nhật thành công lên phiên bản $updatedVersion!",
+                    isStatusError = false
+                )
+            }
+        }
     }
 
     fun shareDownloadedFile(context: Context, item: DownloadItemEntity) {

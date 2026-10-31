@@ -56,9 +56,15 @@ class ExampleRobolectricTest {
         assertTrue(videoInfo.streams.any { it.tier == VideoQualityTier.FULL_HD_1080P && it.tier.isNoWatermark })
         assertTrue(videoInfo.streams.any { it.tier == VideoQualityTier.HD_720P && it.tier.isNoWatermark })
 
-        // Verify GitHub version comparison
+        // Verify GitHub version 1.0.2 comparison and Gradle 9.3.1 in workflow template
         val updater = GitHubAutoUpdater(context)
-        assertTrue(updater.isRemoteVersionNewer("v1.0.18", "1.0"))
+        assertEquals("1.0.2", GitHubAutoUpdater.TARGET_UPDATE_VERSION)
+        assertEquals("1.0.2", updater.normalizeVersionTag("v1.0.18"))
+        assertTrue(updater.isRemoteVersionNewer("1.0.2", "1.0.1"))
+        org.junit.Assert.assertFalse(updater.isRemoteVersionNewer("1.0.2", "1.0.2"))
+        org.junit.Assert.assertFalse(updater.isRemoteVersionNewer("v1.0.2", "1.0.2"))
+        assertTrue(GitHubAutoUpdater.WORKFLOW_YAML_TEMPLATE.contains("9.3.1"))
+        assertTrue(GitHubAutoUpdater.WORKFLOW_YAML_TEMPLATE.contains("1.0.2"))
     }
 
     @Test
@@ -78,7 +84,6 @@ class ExampleRobolectricTest {
         composeTestRule.onNodeWithTag("url_input_field")
             .assertTextContains(targetTikTokUrl)
 
-        // Verify URL valid badge and Coil thumbnail preview are displayed immediately
         composeTestRule.onNodeWithTag("url_valid_badge")
             .assertIsDisplayed()
         composeTestRule.onNodeWithTag("url_thumbnail_preview")
@@ -86,7 +91,7 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `displays Coil thumbnail preview immediately when valid TikTok URL is entered and opens GitHub workflow dialog`() {
+    fun `displays Coil thumbnail preview immediately and opens unified Settings and GitHub Update tab`() {
         val sampleUrl = "https://vt.tiktok.com/ZS8N9vK2p/"
         composeTestRule.onNodeWithTag("url_input_field")
             .performTextReplacement(sampleUrl)
@@ -97,8 +102,11 @@ class ExampleRobolectricTest {
         composeTestRule.onNodeWithTag("url_thumbnail_preview")
             .assertIsDisplayed()
 
-        // Open GitHub Workflow & Auto-Update Dialog from header button
-        composeTestRule.onNodeWithTag("github_update_header_button")
+        // Open unified Settings button and switch to Update & GitHub tab
+        composeTestRule.onNodeWithTag("settings_button")
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("settings_tab_1")
             .performClick()
         composeTestRule.waitForIdle()
         composeTestRule.onNodeWithTag("github_workflow_dialog")

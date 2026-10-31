@@ -19,18 +19,22 @@ jobs:
       - name: 1. Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: 2. Set up JDK 17
+      - name: 2. Set up JDK 21 (Required for AGP 9.1+ & Gradle 9.3.1)
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
-      - name: 3. Setup Gradle & Android SDK
+      - name: 3. Setup Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '9.3.1'
 
-      - name: 4. Generate Debug Keystore if Missing
+      - name: 4. Accept Android SDK Licenses
+        run: |
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: 5. Generate Debug Keystore if Missing
         run: |
           if [ ! -f debug.keystore ]; then
             keytool -genkey -v \
@@ -44,31 +48,32 @@ jobs:
               -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: 5. Build APK (Assemble Debug / Release)
+      - name: 6. Build APK (Assemble Debug Version 1.0.2)
         run: |
-          gradle :app:assembleDebug --no-daemon
+          gradle :app:assembleDebug --no-daemon -Pandroid.builder.sdkDownload=true -PversionName=1.0.2 -PversionCode=2
 
-      - name: 6. Prepare Versioned APK Artifact
+      - name: 7. Prepare Versioned APK Artifact (1.0.2)
         id: prep_version
         run: |
-          VERSION_TAG="v1.0.${{ github.run_number }}"
+          VERSION_TAG="1.0.2"
           APK_NAME="TikStudio-HD-${VERSION_TAG}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "${APK_NAME}"
           echo "version_tag=${VERSION_TAG}" >> $GITHUB_OUTPUT
           echo "apk_name=${APK_NAME}" >> $GITHUB_OUTPUT
 
-      - name: 7. Publish GitHub Release & Upload APK
+      - name: 8. Publish GitHub Release & Upload APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.prep_version.outputs.version_tag }}
-          name: "TikStudio HD ${{ steps.prep_version.outputs.version_tag }} (Auto Build)"
+          tag_name: v${{ steps.prep_version.outputs.version_tag }}
+          name: "TikStudio HD ${{ steps.prep_version.outputs.version_tag }}"
           body: |
             ### 🚀 Bản cập nhật tự động TikStudio HD (${{ steps.prep_version.outputs.version_tag }})
+            - **Phiên bản:** `${{ steps.prep_version.outputs.version_tag }}`
             - **Commit:** `${{ github.sha }}`
             - **Nhánh:** `${{ github.ref_name }}`
             - **Tệp cài đặt:** `${{ steps.prep_version.outputs.apk_name }}`
 
-            Ứng dụng trên điện thoại sẽ tự động nhận diện bản Release này qua GitHub API và thông báo tải về cập nhật trực tiếp.
+            Mở ứng dụng trên điện thoại để nhận thông báo và tự động tải về bản cập nhật 1.0.2 này.
           files: ${{ steps.prep_version.outputs.apk_name }}
           draft: false
           prerelease: false

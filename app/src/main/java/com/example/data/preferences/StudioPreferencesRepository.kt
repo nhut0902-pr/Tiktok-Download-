@@ -46,10 +46,15 @@ data class StudioSettings(
     val includeMp3WithCarousel: Boolean = true,
     val fileNamingRule: FileNamingRule = FileNamingRule.AUTHOR_ID_QUALITY,
     val githubRepoSlug: String = "lamminhnhut/TikStudio-HD",
-    val autoCheckGitHubUpdate: Boolean = true
+    val autoCheckGitHubUpdate: Boolean = true,
+    val appliedUpdateVersion: String = ""
 )
 
 class StudioPreferencesRepository(private val context: Context) {
+
+    private val syncPrefs by lazy {
+        context.getSharedPreferences("tikstudio_update_sync", Context.MODE_PRIVATE)
+    }
 
     private object Keys {
         val DEFAULT_QUALITY = stringPreferencesKey("default_quality_tier")
@@ -60,6 +65,7 @@ class StudioPreferencesRepository(private val context: Context) {
         val FILE_NAMING_RULE = stringPreferencesKey("file_naming_rule")
         val GITHUB_REPO_SLUG = stringPreferencesKey("github_repo_slug")
         val AUTO_CHECK_GITHUB_UPDATE = booleanPreferencesKey("auto_check_github_update")
+        val APPLIED_UPDATE_VERSION = stringPreferencesKey("applied_update_version")
     }
 
     val settingsFlow: Flow<StudioSettings> = context.studioDataStore.data.map { prefs ->
@@ -75,8 +81,39 @@ class StudioPreferencesRepository(private val context: Context) {
                 prefs[Keys.FILE_NAMING_RULE] ?: FileNamingRule.AUTHOR_ID_QUALITY.id
             ),
             githubRepoSlug = prefs[Keys.GITHUB_REPO_SLUG] ?: "lamminhnhut/TikStudio-HD",
-            autoCheckGitHubUpdate = prefs[Keys.AUTO_CHECK_GITHUB_UPDATE] ?: true
+            autoCheckGitHubUpdate = prefs[Keys.AUTO_CHECK_GITHUB_UPDATE] ?: true,
+            appliedUpdateVersion = prefs[Keys.APPLIED_UPDATE_VERSION]
+                ?: syncPrefs.getString("applied_update_version", "").orEmpty()
         )
+    }
+
+    fun getEffectiveVersionName(buildConfigVersion: String): String {
+        val cleanBuild = buildConfigVersion.trim().removePrefix("v").removePrefix("V")
+        val savedApplied = syncPrefs.getString("applied_update_version", "").orEmpty()
+            .trim()
+            .removePrefix("v")
+            .removePrefix("V")
+        if (savedApplied.isBlank()) return cleanBuild
+        return if (isVersionAHigherOrEqual(savedApplied, cleanBuild)) savedApplied else cleanBuild
+    }
+
+    private fun isVersionAHigherOrEqual(versionA: String, versionB: String): Boolean {
+        val aParts = versionA.split(".", "-").mapNotNull { it.toIntOrNull() }
+        val bParts = versionB.split(".", "-").mapNotNull { it.toIntOrNull() }
+        val maxLen = maxOf(aParts.size, bParts.size)
+        for (i in 0 until maxLen) {
+            val a = aParts.getOrElse(i) { 0 }
+            val b = bParts.getOrElse(i) { 0 }
+            if (a > b) return true
+            if (a < b) return false
+        }
+        return true
+    }
+
+    suspend fun markVersionUpdated(version: String) {
+        val cleanVersion = version.trim().removePrefix("v").removePrefix("V")
+        syncPrefs.edit().putString("applied_update_version", cleanVersion).apply()
+        context.studioDataStore.edit { it[Keys.APPLIED_UPDATE_VERSION] = cleanVersion }
     }
 
     suspend fun updateDefaultQuality(tier: VideoQualityTier) {

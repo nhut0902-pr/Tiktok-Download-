@@ -25,18 +25,11 @@ import androidx.compose.material.icons.filled.Audiotrack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.Hd
-import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.SelectAll
-import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Verified
-import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -73,7 +66,6 @@ import com.example.ui.theme.ElectricCyan
 import com.example.ui.theme.EmeraldBadge
 import com.example.ui.theme.EmeraldBadgeBg
 import com.example.ui.theme.GoldBadge
-import com.example.ui.theme.GoldBadgeBg
 import com.example.ui.theme.JetBrainsMonoFamily
 import com.example.ui.theme.NeonCoral
 import com.example.ui.theme.StudioBackground
@@ -124,7 +116,7 @@ fun MediaInspectorCard(
             .padding(16.dp)
             .testTag("media_inspector_card")
     ) {
-        // 1. Author & Watermark Status Strip
+        // 1. Clean Author Header
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -135,20 +127,15 @@ fun MediaInspectorCard(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.weight(1f)
             ) {
-                Box(
+                AsyncImage(
+                    model = media.authorAvatarUrl,
+                    contentDescription = media.authorName,
+                    contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(40.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
                         .background(StudioElevatedSurface)
-                        .border(1.5.dp, ElectricCyan, CircleShape)
-                ) {
-                    AsyncImage(
-                        model = media.authorAvatarUrl,
-                        contentDescription = "Ảnh đại diện ${media.authorName}",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                )
 
                 Column(modifier = Modifier.weight(1f)) {
                     Row(
@@ -158,6 +145,7 @@ fun MediaInspectorCard(
                         Text(
                             text = media.authorName,
                             style = MaterialTheme.typography.titleMedium,
+                            fontSize = 14.sp,
                             color = TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -166,30 +154,26 @@ fun MediaInspectorCard(
                             imageVector = Icons.Filled.Verified,
                             contentDescription = null,
                             tint = ElectricCyan,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                     Text(
-                        text = "${media.authorHandle} • ID: ${media.id.takeLast(8)}",
+                        text = media.authorHandle,
                         fontFamily = JetBrainsMonoFamily,
                         fontSize = 11.sp,
-                        color = TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        color = TextSecondary
                     )
                 }
             }
 
-            // No-Watermark Status Badge
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .background(EmeraldBadgeBg)
-                    .border(1.dp, EmeraldBadge.copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                     .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
                 Text(
-                    text = if (media.isPhotoSlideshow) "SLIDESHOW • NO LOGO" else "KHÔNG LOGO • HD",
+                    text = if (media.isPhotoSlideshow) "BỘ ẢNH • KHÔNG LOGO" else "KHÔNG LOGO",
                     fontFamily = JetBrainsMonoFamily,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
@@ -200,193 +184,91 @@ fun MediaInspectorCard(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 2. Hero Media Frame (Video Cover or Slideshow Preview)
+        // 2. Refined Cinema Cover Card
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(195.dp)
+                .height(172.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .background(StudioBackground)
-                .border(1.dp, StudioCardBorder, RoundedCornerShape(16.dp))
                 .clickable { onOpenLivePreview(0) }
                 .testTag("preview_media_button")
         ) {
             AsyncImage(
                 model = media.coverUrl,
-                contentDescription = "Ảnh bìa ${media.title}",
+                contentDescription = media.title,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
 
-            // Studio Darkroom Gradient Overlay
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(
-                                Color.Black.copy(alpha = 0.25f),
+                                Color.Black.copy(alpha = 0.2f),
                                 Color.Transparent,
-                                Color.Black.copy(alpha = 0.85f)
+                                Color.Black.copy(alpha = 0.82f)
                             )
                         )
                     )
             )
 
-            // Top-left & Top-right floating badges
-            Row(
+            // Duration Badge
+            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .align(Alignment.TopEnd)
+                    .padding(10.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color.Black.copy(alpha = 0.7f))
+                    .padding(horizontal = 7.dp, vertical = 3.dp)
             ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.72f))
-                        .border(1.dp, GoldBadge.copy(alpha = 0.6f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = if (media.isPhotoSlideshow) {
-                            "BỘ ${media.photos.size} ẢNH GỐC (1080x1440)"
-                        } else {
-                            activeStream?.tier?.badgeText ?: "FULL HD 1080P"
-                        },
-                        fontFamily = JetBrainsMonoFamily,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GoldBadge
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.Black.copy(alpha = 0.72f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        text = FormatUtils.formatDuration(media.durationSeconds),
-                        fontFamily = JetBrainsMonoFamily,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                }
+                Text(
+                    text = FormatUtils.formatDuration(media.durationSeconds),
+                    fontFamily = JetBrainsMonoFamily,
+                    fontSize = 10.sp,
+                    color = TextPrimary
+                )
             }
 
-            // Center Play / Inspect Button
+            // Center Play Icon
             Box(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(54.dp)
+                    .size(46.dp)
                     .clip(CircleShape)
-                    .background(Color.Black.copy(alpha = 0.68f))
-                    .border(
-                        width = 1.8.dp,
-                        brush = Brush.linearGradient(listOf(ElectricCyan, NeonCoral)),
-                        shape = CircleShape
-                    ),
+                    .background(Color.Black.copy(alpha = 0.65f))
+                    .border(1.5.dp, ElectricCyan, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = if (media.isPhotoSlideshow) Icons.Filled.ZoomIn else Icons.Filled.PlayArrow,
                     contentDescription = "Xem trước",
                     tint = ElectricCyan,
-                    modifier = Modifier.size(30.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
 
-            // Bottom Caption & Stats Overlay
-            Column(
+            // Caption at bottom
+            Text(
+                text = media.title,
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
                     .align(Alignment.BottomStart)
                     .fillMaxWidth()
                     .padding(12.dp)
-            ) {
-                Text(
-                    text = media.title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Visibility,
-                                contentDescription = null,
-                                tint = ElectricCyan,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = FormatUtils.formatCount(media.playCount),
-                                fontFamily = JetBrainsMonoFamily,
-                                fontSize = 11.sp,
-                                color = TextSecondary
-                            )
-                        }
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Favorite,
-                                contentDescription = null,
-                                tint = NeonCoral,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                text = FormatUtils.formatCount(media.likeCount),
-                                fontFamily = JetBrainsMonoFamily,
-                                fontSize = 11.sp,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.MusicNote,
-                            contentDescription = null,
-                            tint = GoldBadge,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Text(
-                            text = media.musicTitle,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontSize = 11.sp,
-                            color = TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.width(140.dp)
-                        )
-                    }
-                }
-            }
+            )
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // 3. Mode-Specific Selector: Video Quality Tier Selector OR Photo Carousel Multi-Selector
+        // 3. Clean Quality Selector OR Photo Carousel Grid
         if (media.isPhotoSlideshow) {
             PhotoSlideshowSelectorSection(
                 photos = media.photos,
@@ -406,183 +288,137 @@ fun MediaInspectorCard(
             )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        // Expandable Custom File Name Prefix (Only shown when user taps the Edit icon)
+        AnimatedVisibility(visible = isCustomOptionsExpanded) {
+            Column(modifier = Modifier.padding(top = 12.dp)) {
+                OutlinedTextField(
+                    value = customOptions.customFilePrefix,
+                    onValueChange = onUpdateCustomPrefix,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("custom_prefix_input"),
+                    placeholder = {
+                        Text(
+                            text = "Nhập tiền tố tên tệp (VD: TikTok_1080p)...",
+                            fontSize = 12.sp,
+                            color = TextMuted
+                        )
+                    },
+                    singleLine = true,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = StudioElevatedSurface,
+                        unfocusedContainerColor = StudioElevatedSurface,
+                        focusedBorderColor = ElectricCyan,
+                        unfocusedBorderColor = StudioCardBorder
+                    )
+                )
 
-        // 4. Expandable Custom File Prefix & Stream Technical Specs
-        Surface(
-            onClick = onToggleCustomOptionsExpanded,
-            shape = RoundedCornerShape(12.dp),
-            color = StudioElevatedSurface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("toggle_custom_options_button")
-        ) {
-            Column(modifier = Modifier.padding(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Text(
+                        text = activeStream?.codecLabel ?: "JPEG Lossless • Không Logo",
+                        fontFamily = JetBrainsMonoFamily,
+                        fontSize = 10.sp,
+                        color = TextSecondary
+                    )
+                    TextButton(
+                        onClick = {
+                            val targetUrl = activeStream?.streamUrl
+                                ?: media.photos.firstOrNull()?.imageUrl
+                                ?: media.originalUrl
+                            onCopyDirectUrl(targetUrl)
+                        }
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Tune,
+                            imageVector = Icons.Filled.ContentCopy,
                             contentDescription = null,
                             tint = ElectricCyan,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(14.dp)
                         )
-                        Column {
-                            Text(
-                                text = "Tuỳ chỉnh tên tệp & Thông số luồng HD",
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = activeStream?.codecLabel ?: "JPEG 100% Lossless • Không Logo",
-                                fontFamily = JetBrainsMonoFamily,
-                                fontSize = 10.sp,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-                    Icon(
-                        imageVector = if (isCustomOptionsExpanded) {
-                            Icons.Filled.ExpandLess
-                        } else {
-                            Icons.Filled.ExpandMore
-                        },
-                        contentDescription = "Mở rộng tuỳ chỉnh",
-                        tint = TextSecondary
-                    )
-                }
-
-                AnimatedVisibility(visible = isCustomOptionsExpanded) {
-                    Column(modifier = Modifier.padding(top = 12.dp)) {
-                        OutlinedTextField(
-                            value = customOptions.customFilePrefix,
-                            onValueChange = onUpdateCustomPrefix,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .testTag("custom_prefix_input"),
-                            label = {
-                                Text(
-                                    text = "Tiền tố tên tệp tuỳ chỉnh (Tuỳ chọn)",
-                                    fontSize = 12.sp
-                                )
-                            },
-                            placeholder = {
-                                Text(
-                                    text = "VD: TikTok_Review_1080p",
-                                    fontSize = 12.sp,
-                                    color = TextMuted
-                                )
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(10.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = StudioSurface,
-                                unfocusedContainerColor = StudioSurface,
-                                focusedBorderColor = ElectricCyan,
-                                unfocusedBorderColor = StudioCardBorder
-                            )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Copy link gốc",
+                            fontSize = 11.sp,
+                            color = ElectricCyan
                         )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Engine: ${media.sourceEngine}",
-                                    fontFamily = JetBrainsMonoFamily,
-                                    fontSize = 10.sp,
-                                    color = EmeraldBadge
-                                )
-                                activeStream?.let { s ->
-                                    Text(
-                                        text = "Bitrate: ${s.bitrateKbps} kbps • Độ phân giải: ${s.tier.resolution}",
-                                        fontFamily = JetBrainsMonoFamily,
-                                        fontSize = 10.sp,
-                                        color = TextSecondary
-                                    )
-                                }
-                            }
-
-                            TextButton(
-                                onClick = {
-                                    val targetUrl = activeStream?.streamUrl
-                                        ?: media.photos.firstOrNull()?.imageUrl
-                                        ?: media.originalUrl
-                                    onCopyDirectUrl(targetUrl)
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.ContentCopy,
-                                    contentDescription = null,
-                                    tint = ElectricCyan,
-                                    modifier = Modifier.size(15.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = "Copy Link Gốc",
-                                    fontSize = 12.sp,
-                                    color = ElectricCyan
-                                )
-                            }
-                        }
                     }
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(14.dp))
 
-        // 5. Active Download Telemetry Bar OR Primary Download Button
+        // 4. Primary Download Button + Inline Customize Filename Button
         if (activeDownload != null) {
             ActiveDownloadTelemetryBox(progress = activeDownload)
         } else {
             val buttonLabel = if (media.isPhotoSlideshow) {
                 val count = customOptions.selectedPhotoIndices.size
-                val audioSuffix = if (customOptions.includeAudioWithPhotos) " + Nhạc MP3" else ""
-                "Tải $count Ảnh HD Không Logo$audioSuffix"
+                val audioSuffix = if (customOptions.includeAudioWithPhotos) " + MP3" else ""
+                "Tải $count Ảnh HD$audioSuffix"
             } else {
                 val tier = activeStream?.tier ?: VideoQualityTier.FULL_HD_1080P
                 val sizeStr = FormatUtils.formatFileSize(activeStream?.fileSizeBytes ?: 16_000_000L)
-                val logoSuffix = if (tier.isNoWatermark) "Không Logo" else "Có Logo"
-                "Tải ${tier.shortTitle} ($logoSuffix) • $sizeStr"
+                "Tải ${tier.shortTitle} • $sizeStr"
             }
 
-            Button(
-                onClick = onStartDownload,
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = ElectricCyan,
-                    contentColor = Color(0xFF001F24)
-                ),
-                contentPadding = PaddingValues(vertical = 15.dp, horizontal = 18.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .testTag("download_primary_button")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Download,
-                    contentDescription = null,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = buttonLabel,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF001F24)
-                )
+                Button(
+                    onClick = onStartDownload,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ElectricCyan,
+                        contentColor = Color(0xFF001F24)
+                    ),
+                    contentPadding = PaddingValues(vertical = 14.dp, horizontal = 16.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("download_primary_button")
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = buttonLabel,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF001F24)
+                    )
+                }
+
+                Surface(
+                    onClick = onToggleCustomOptionsExpanded,
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isCustomOptionsExpanded) ElectricCyan.copy(alpha = 0.16f) else StudioElevatedSurface,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isCustomOptionsExpanded) ElectricCyan else StudioCardBorder
+                    ),
+                    modifier = Modifier
+                        .size(50.dp)
+                        .testTag("toggle_custom_options_button")
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Filled.Edit,
+                            contentDescription = "Đặt tên tệp tuỳ chỉnh",
+                            tint = if (isCustomOptionsExpanded) ElectricCyan else TextSecondary,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
+                }
             }
         }
     }
@@ -595,24 +431,13 @@ private fun VideoQualityTierSelectorSection(
     onSelectTier: (VideoQualityTier) -> Unit
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = "TUỲ CHỈNH CHẤT LƯỢNG TẢI (NO WATERMARK)",
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Chuẩn H.264 / MP3",
-                fontFamily = JetBrainsMonoFamily,
-                fontSize = 10.sp,
-                color = ElectricCyan
-            )
-        }
+        Text(
+            text = "Chọn chất lượng tải về",
+            style = MaterialTheme.typography.bodyMedium,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextSecondary
+        )
 
         streams.forEach { option ->
             val isSelected = option.tier == selectedTier
@@ -625,64 +450,62 @@ private fun VideoQualityTierSelectorSection(
                 else -> ElectricCyan
             }
 
-            Box(
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(
-                        if (isSelected) accentColor.copy(alpha = 0.12f)
+                        if (isSelected) accentColor.copy(alpha = 0.1f)
                         else StudioElevatedSurface
                     )
                     .border(
                         width = if (isSelected) 1.5.dp else 1.dp,
                         color = if (isSelected) accentColor else StudioCardBorder,
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RoundedCornerShape(12.dp)
                     )
                     .clickable { onSelectTier(option.tier) }
-                    .padding(horizontal = 14.dp, vertical = 12.dp)
-                    .testTag("quality_option_${option.tier.id}")
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .testTag("quality_option_${option.tier.id}"),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Icon(
-                            imageVector = if (isSelected) {
-                                Icons.Filled.CheckCircle
-                            } else {
-                                Icons.Filled.RadioButtonUnchecked
-                            },
-                            contentDescription = null,
-                            tint = if (isSelected) accentColor else TextMuted,
-                            modifier = Modifier.size(22.dp)
-                        )
+                    Icon(
+                        imageVector = if (isSelected) {
+                            Icons.Filled.CheckCircle
+                        } else {
+                            Icons.Filled.RadioButtonUnchecked
+                        },
+                        contentDescription = null,
+                        tint = if (isSelected) accentColor else TextMuted,
+                        modifier = Modifier.size(20.dp)
+                    )
 
-                        Column {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    text = option.tier.shortTitle,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
+                    Column {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Text(
+                                text = option.tier.shortTitle,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            if (option.tier.isNoWatermark) {
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
+                                        .clip(RoundedCornerShape(4.dp))
                                         .background(accentColor.copy(alpha = 0.18f))
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        .padding(horizontal = 5.dp, vertical = 1.dp)
                                 ) {
                                     Text(
-                                        text = option.tier.badgeText,
+                                        text = if (isFullHd) "60FPS" else if (isAudio) "320K" else "HD",
                                         fontFamily = JetBrainsMonoFamily,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
@@ -690,47 +513,23 @@ private fun VideoQualityTierSelectorSection(
                                     )
                                 }
                             }
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = option.tier.subtitle,
-                                style = MaterialTheme.typography.bodyMedium,
-                                fontSize = 12.sp,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-
-                    Column(horizontalAlignment = Alignment.End) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                imageVector = when {
-                                    isFullHd -> Icons.Filled.HighQuality
-                                    isAudio -> Icons.Filled.Audiotrack
-                                    else -> Icons.Filled.Hd
-                                },
-                                contentDescription = null,
-                                tint = accentColor,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Text(
-                                text = FormatUtils.formatFileSize(option.fileSizeBytes),
-                                fontFamily = JetBrainsMonoFamily,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
                         }
                         Text(
-                            text = if (option.fps > 0) "${option.tier.resolution} • ${option.fps}fps" else "320 kbps",
-                            fontFamily = JetBrainsMonoFamily,
-                            fontSize = 10.sp,
+                            text = option.tier.subtitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontSize = 11.sp,
                             color = TextSecondary
                         )
                     }
                 }
+
+                Text(
+                    text = FormatUtils.formatFileSize(option.fileSizeBytes),
+                    fontFamily = JetBrainsMonoFamily,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) accentColor else TextPrimary
+                )
             }
         }
     }
@@ -753,31 +552,24 @@ private fun PhotoSlideshowSelectorSection(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                Text(
-                    text = "CHỌN ẢNH TRONG BỘ SLIDESHOW (${selectedIndices.size}/${photos.size})",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = ElectricCyan,
-                    fontWeight = FontWeight.Bold
-                )
-                Text(
-                    text = "Chất lượng gốc 1080x1440 • Đã xoá watermark TikTok",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontSize = 12.sp,
-                    color = TextSecondary
-                )
-            }
+            Text(
+                text = "Đã chọn ${selectedIndices.size}/${photos.size} ảnh HD",
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextSecondary
+            )
 
             val allSelected = selectedIndices.size == photos.size
             Surface(
                 onClick = { if (allSelected) onDeselectAll() else onSelectAll() },
                 shape = RoundedCornerShape(8.dp),
                 color = StudioElevatedSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, ElectricCyan.copy(alpha = 0.5f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
                 modifier = Modifier.testTag("select_all_photos_button")
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -785,11 +577,11 @@ private fun PhotoSlideshowSelectorSection(
                         imageVector = Icons.Filled.SelectAll,
                         contentDescription = null,
                         tint = ElectricCyan,
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = if (allSelected) "Bỏ chọn" else "Chọn tất cả",
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = ElectricCyan
                     )
@@ -799,20 +591,20 @@ private fun PhotoSlideshowSelectorSection(
 
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(10.dp),
-            contentPadding = PaddingValues(vertical = 4.dp)
+            contentPadding = PaddingValues(vertical = 2.dp)
         ) {
             items(photos, key = { it.index }) { photo ->
                 val isSelected = selectedIndices.contains(photo.index)
                 Box(
                     modifier = Modifier
-                        .width(120.dp)
-                        .height(156.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .width(108.dp)
+                        .height(142.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(StudioElevatedSurface)
                         .border(
                             width = if (isSelected) 2.dp else 1.dp,
                             color = if (isSelected) ElectricCyan else StudioCardBorder,
-                            shape = RoundedCornerShape(14.dp)
+                            shape = RoundedCornerShape(12.dp)
                         )
                         .clickable { onTogglePhoto(photo.index) }
                         .testTag("photo_slide_${photo.index}")
@@ -824,39 +616,23 @@ private fun PhotoSlideshowSelectorSection(
                         modifier = Modifier.fillMaxSize()
                     )
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color.Black.copy(alpha = 0.35f),
-                                        Color.Transparent,
-                                        Color.Black.copy(alpha = 0.75f)
-                                    )
-                                )
-                            )
-                    )
-
-                    // Top row: slide number & checkbox
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(8.dp),
+                            .padding(6.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(Color.Black.copy(alpha = 0.7f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(Color.Black.copy(alpha = 0.65f))
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = "#${photo.index + 1}",
                                 fontFamily = JetBrainsMonoFamily,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp,
                                 color = TextPrimary
                             )
                         }
@@ -869,81 +645,56 @@ private fun PhotoSlideshowSelectorSection(
                             },
                             contentDescription = null,
                             tint = if (isSelected) ElectricCyan else Color.White,
-                            modifier = Modifier.size(22.dp)
+                            modifier = Modifier.size(20.dp)
                         )
                     }
 
-                    // Bottom row: zoom preview & resolution
-                    Row(
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .align(Alignment.BottomEnd)
+                            .padding(6.dp)
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.65f))
+                            .clickable { onPreviewPhoto(photo.index) },
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = FormatUtils.formatFileSize(photo.estimatedSizeBytes),
-                            fontFamily = JetBrainsMonoFamily,
-                            fontSize = 10.sp,
-                            color = TextPrimary
+                        Icon(
+                            imageVector = Icons.Filled.ZoomIn,
+                            contentDescription = "Phóng to",
+                            tint = ElectricCyan,
+                            modifier = Modifier.size(14.dp)
                         )
-
-                        Box(
-                            modifier = Modifier
-                                .size(26.dp)
-                                .clip(CircleShape)
-                                .background(Color.Black.copy(alpha = 0.7f))
-                                .clickable { onPreviewPhoto(photo.index) },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.ZoomIn,
-                                contentDescription = "Phóng to ảnh",
-                                tint = ElectricCyan,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
                     }
                 }
             }
         }
 
-        // Toggle to also download original background MP3 with the photo slideshow
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
                 .background(StudioElevatedSurface)
-                .border(1.dp, StudioCardBorder, RoundedCornerShape(12.dp))
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 12.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.weight(1f)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Filled.Audiotrack,
                     contentDescription = null,
                     tint = NeonCoral,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
-                Column {
-                    Text(
-                        text = "Tải kèm nhạc nền gốc MP3 (320kbps)",
-                        style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "Lưu thêm tệp âm thanh gốc của bộ ảnh",
-                        fontSize = 11.sp,
-                        color = TextSecondary
-                    )
-                }
+                Text(
+                    text = "Tải kèm nhạc nền MP3 (320kbps)",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 12.sp,
+                    color = TextPrimary
+                )
             }
 
             Switch(
@@ -968,8 +719,8 @@ private fun ActiveDownloadTelemetryBox(
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
             .background(StudioElevatedSurface)
-            .border(1.dp, ElectricCyan.copy(alpha = 0.65f), RoundedCornerShape(14.dp))
-            .padding(14.dp)
+            .border(1.dp, ElectricCyan.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
+            .padding(12.dp)
             .testTag("active_download_box")
     ) {
         Row(
@@ -980,52 +731,29 @@ private fun ActiveDownloadTelemetryBox(
             Text(
                 text = progress.statusText,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = ElectricCyan
             )
             Text(
                 text = "$pct% • ${FormatUtils.formatSpeed(progress.speedKbps)}",
                 fontFamily = JetBrainsMonoFamily,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = GoldBadge
             )
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
         LinearProgressIndicator(
             progress = { progress.progress.coerceIn(0.02f, 1f) },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp)),
             color = ElectricCyan,
             trackColor = StudioBackground
         )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                text = progress.taskTitle,
-                fontFamily = JetBrainsMonoFamily,
-                fontSize = 10.sp,
-                color = TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "${FormatUtils.formatFileSize(progress.downloadedBytes)} / ${FormatUtils.formatFileSize(progress.totalBytes)}",
-                fontFamily = JetBrainsMonoFamily,
-                fontSize = 10.sp,
-                color = TextPrimary
-            )
-        }
     }
 }

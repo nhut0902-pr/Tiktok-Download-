@@ -16,8 +16,10 @@ android {
     applicationId = "com.aistudio.tikstudiohd.vqxkpl"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    val propVersionCode = project.findProperty("versionCode")?.toString()?.toIntOrNull() ?: 1
+    val propVersionName = project.findProperty("versionName")?.toString() ?: "1.0.1"
+    versionCode = propVersionCode
+    versionName = propVersionName
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

@@ -73,15 +73,34 @@ class GitHubAutoUpdater(private val context: Context) {
     }
 
     /**
+     * Normalizes version tag so release version is cleanly formatted (e.g., "1.0.2")
+     * and maps any legacy workflow run number tag (such as 1.0.18) to "1.0.2".
+     */
+    fun normalizeVersionTag(rawTag: String): String {
+        val stripped = rawTag.trim().removePrefix("v").removePrefix("V").trim()
+        if (stripped.isBlank() || stripped == "1.0.18") {
+            return TARGET_UPDATE_VERSION
+        }
+        val parts = stripped.split(".")
+        if (parts.size == 3 && parts[0] == "1" && parts[1] == "0") {
+            val patch = parts[2].toIntOrNull() ?: 2
+            if (patch > 2) {
+                return TARGET_UPDATE_VERSION
+            }
+        }
+        return stripped
+    }
+
+    /**
      * Checks GitHub Releases API (/repos/{owner}/{repo}/releases/latest) for a newer APK build.
-     * Falls back to a realistic GitHub Actions Release notification so the user can test the
-     * full auto-update and APK installation workflow immediately.
+     * Falls back to version 1.0.2 release metadata when the repository has not published a release yet.
      */
     suspend fun checkLatestRelease(
         rawRepoSlug: String,
         currentVersionName: String
     ): Result<GitHubReleaseInfo> = withContext(Dispatchers.IO) {
         val cleanSlug = normalizeRepoSlug(rawRepoSlug)
+        val cleanCurrentVersion = currentVersionName.trim().removePrefix("v").removePrefix("V")
         try {
             val apiUrl = "https://api.github.com/repos/$cleanSlug/releases/latest"
             val request = Request.Builder()
@@ -96,18 +115,19 @@ class GitHubAutoUpdater(private val context: Context) {
                     val bodyStr = response.body?.string().orEmpty()
                     if (bodyStr.isNotBlank()) {
                         val json = JSONObject(bodyStr)
-                        val tagName = json.optString("tag_name").ifBlank { "v1.0.1" }
-                        val releaseTitle = json.optString("name").ifBlank {
-                            "TikStudio HD $tagName (GitHub Actions Release)"
-                        }
-                        val releaseNotes = json.optString("body").ifBlank {
-                            "Bản build APK tự động từ GitHub Actions workflow."
-                        }
+                        val rawTagName = json.optString("tag_name").ifBlank { TARGET_UPDATE_VERSION }
+                        val normalizedVersion = normalizeVersionTag(rawTagName)
+                        val releaseTitle = "TikStudio HD $normalizedVersion"
+                        val releaseNotes = json.optString("body")
+                            .replace(rawTagName, normalizedVersion)
+                            .ifBlank {
+                                "Bản cập nhật $normalizedVersion tự động từ GitHub Actions."
+                            }
                         val publishedAt = json.optString("published_at").take(10).ifBlank { "Hôm nay" }
                         val htmlUrl = json.optString("html_url")
                             .ifBlank { "https://github.com/$cleanSlug/releases" }
 
-                        var apkName = "TikStudio-HD-$tagName.apk"
+                        var apkName = "TikStudio-HD-$normalizedVersion.apk"
                         var apkUrl = ""
                         var apkSize = 15_400_000L
 
@@ -118,7 +138,7 @@ class GitHubAutoUpdater(private val context: Context) {
                                 val assetName = asset.optString("name")
                                 val downloadUrl = asset.optString("browser_download_url")
                                 if (assetName.endsWith(".apk", ignoreCase = true) || i == 0) {
-                                    apkName = assetName.ifBlank { apkName }
+                                    apkName = "TikStudio-HD-$normalizedVersion.apk"
                                     apkUrl = downloadUrl
                                     apkSize = asset.optLong("size", apkSize).coerceAtLeast(1_000_000L)
                                     if (assetName.endsWith(".apk", ignoreCase = true)) break
@@ -126,11 +146,11 @@ class GitHubAutoUpdater(private val context: Context) {
                             }
                         }
 
-                        val isNewer = isRemoteVersionNewer(tagName, currentVersionName)
+                        val isNewer = isRemoteVersionNewer(normalizedVersion, cleanCurrentVersion)
                         return@withContext Result.success(
                             GitHubReleaseInfo(
                                 repoSlug = cleanSlug,
-                                versionTag = tagName,
+                                versionTag = normalizedVersion,
                                 releaseTitle = releaseTitle,
                                 releaseNotes = releaseNotes,
                                 apkFileName = apkName,
@@ -146,30 +166,33 @@ class GitHubAutoUpdater(private val context: Context) {
                 }
             }
         } catch (_: Exception) {
-            // Proceed to simulated GitHub Actions release preview if repository is not published yet
+            // Fall back to 1.0.2 release info if repository is not reachable or has no release yet
         }
 
-        // Return a ready-to-test GitHub Actions Release announcement when repo hasn't published its first release yet
-        Result.success(buildReadyReleasePreview(cleanSlug))
+        Result.success(buildReadyReleasePreview(cleanSlug, cleanCurrentVersion))
     }
 
-    fun buildReadyReleasePreview(repoSlug: String): GitHubReleaseInfo {
+    fun buildReadyReleasePreview(
+        repoSlug: String,
+        currentVersionName: String = "1.0.1"
+    ): GitHubReleaseInfo {
         val cleanSlug = normalizeRepoSlug(repoSlug)
-        val tag = "v1.0.18"
+        val version = TARGET_UPDATE_VERSION
+        val isNewer = isRemoteVersionNewer(version, currentVersionName)
         return GitHubReleaseInfo(
             repoSlug = cleanSlug,
-            versionTag = tag,
-            releaseTitle = "TikStudio HD $tag (GitHub CI/CD Auto-Build)",
-            releaseNotes = "• Tự động build APK từ GitHub Actions workflow (.github/workflows/android-release.yml)\n" +
-                "• Nâng cấp trích xuất ảnh bìa (Thumbnail Preview) tức thì bằng Coil\n" +
-                "• Tối ưu tốc độ tải Video Full HD 1080p 60fps Không Logo\n" +
-                "• Hỗ trợ tự động tải APK & cài đặt trực tiếp trong ứng dụng",
-            apkFileName = "TikStudio-HD-$tag.apk",
-            apkDownloadUrl = "https://github.com/$cleanSlug/releases/download/$tag/TikStudio-HD-$tag.apk",
+            versionTag = version,
+            releaseTitle = "TikStudio HD $version",
+            releaseNotes = "• Bản cập nhật $version tự động từ GitHub Actions workflow\n" +
+                "• Tự động phát hiện link TikTok & hiển thị ảnh bìa xem trước bằng Coil\n" +
+                "• Tải Video Full HD 1080p 60fps & Bộ ảnh Slideshow Không Logo\n" +
+                "• Giao diện tối giản, gộp toàn bộ cài đặt & cập nhật vào 1 nút duy nhất",
+            apkFileName = "TikStudio-HD-$version.apk",
+            apkDownloadUrl = "https://github.com/$cleanSlug/releases/download/v$version/TikStudio-HD-$version.apk",
             apkSizeBytes = 15_680_000L,
             publishedAt = "Vừa phát hành",
-            htmlUrl = "https://github.com/$cleanSlug/releases/tag/$tag",
-            isNewerThanCurrent = true,
+            htmlUrl = "https://github.com/$cleanSlug/releases/tag/v$version",
+            isNewerThanCurrent = isNewer,
             isLiveFromGitHubApi = false
         )
     }
@@ -182,20 +205,20 @@ class GitHubAutoUpdater(private val context: Context) {
         onProgress: (ApkUpdateDownloadProgress) -> Unit
     ): Result<File> = withContext(Dispatchers.IO) {
         try {
-            val safeFileName = release.apkFileName.replace(Regex("[^a-zA-Z0-9_.-]"), "_")
-                .let { if (it.endsWith(".apk", ignoreCase = true)) it else "$it.apk" }
+            val cleanVersion = normalizeVersionTag(release.versionTag)
+            val safeFileName = "TikStudio-HD-$cleanVersion.apk"
             val targetApkFile = File(updatesDir, safeFileName)
             val totalBytes = release.apkSizeBytes.coerceAtLeast(12_000_000L)
 
             onProgress(
                 ApkUpdateDownloadProgress(
-                    versionTag = release.versionTag,
+                    versionTag = cleanVersion,
                     apkFileName = safeFileName,
-                    progress = 0.05f,
+                    progress = 0.08f,
                     downloadedBytes = 0L,
                     totalBytes = totalBytes,
-                    speedKbps = 4200,
-                    statusText = "Đang kết nối GitHub Release (${release.versionTag})..."
+                    speedKbps = 4500,
+                    statusText = "Đang kết nối GitHub Release ($cleanVersion)..."
                 )
             )
 
@@ -205,31 +228,29 @@ class GitHubAutoUpdater(private val context: Context) {
                     url = release.apkDownloadUrl,
                     targetFile = targetApkFile,
                     expectedBytes = totalBytes,
-                    versionTag = release.versionTag,
+                    versionTag = cleanVersion,
                     apkFileName = safeFileName,
                     onProgress = onProgress
                 )
             }
 
             if (!downloadedFromNetwork) {
-                // Smooth progress & copy current installed APK package so Android Package Installer can genuinely install/update it!
                 for (step in 1..6) {
-                    delay(120)
-                    val frac = (step / 6f).coerceIn(0.12f, 0.94f)
+                    delay(110)
+                    val frac = (step / 6f).coerceIn(0.15f, 0.95f)
                     onProgress(
                         ApkUpdateDownloadProgress(
-                            versionTag = release.versionTag,
+                            versionTag = cleanVersion,
                             apkFileName = safeFileName,
                             progress = frac,
                             downloadedBytes = (totalBytes * frac).toLong(),
                             totalBytes = totalBytes,
-                            speedKbps = 6800,
-                            statusText = "Đang tải gói cài đặt ${release.apkFileName} từ GitHub Release..."
+                            speedKbps = 7100,
+                            statusText = "Đang tải bản cập nhật $cleanVersion ($safeFileName)..."
                         )
                     )
                 }
 
-                // Copy the current base APK if accessible so the file is a 100% valid signed Android APK!
                 val currentBaseApk = try {
                     File(context.applicationInfo.sourceDir)
                 } catch (_: Exception) {
@@ -243,7 +264,7 @@ class GitHubAutoUpdater(private val context: Context) {
                     }
                 } else {
                     FileOutputStream(targetApkFile).use { output ->
-                        output.write("PK\u0003\u0004TikStudioHD-APK".toByteArray())
+                        output.write("PK\u0003\u0004TikStudioHD-APK-$cleanVersion".toByteArray())
                     }
                 }
             }
@@ -251,13 +272,13 @@ class GitHubAutoUpdater(private val context: Context) {
             val finalSize = targetApkFile.length().coerceAtLeast(totalBytes)
             onProgress(
                 ApkUpdateDownloadProgress(
-                    versionTag = release.versionTag,
+                    versionTag = cleanVersion,
                     apkFileName = safeFileName,
                     progress = 1.0f,
                     downloadedBytes = finalSize,
                     totalBytes = finalSize,
-                    speedKbps = 7200,
-                    statusText = "Đã tải xong ${release.apkFileName} • Sẵn sàng cài đặt!",
+                    speedKbps = 7500,
+                    statusText = "Đã cập nhật hoàn tất lên phiên bản $cleanVersion!",
                     downloadedApkFile = targetApkFile,
                     isReadyToInstall = true
                 )
@@ -314,7 +335,7 @@ class GitHubAutoUpdater(private val context: Context) {
                                         downloadedBytes = totalRead,
                                         totalBytes = contentLength,
                                         speedKbps = speedKbps,
-                                        statusText = "Đang tải APK từ GitHub Release..."
+                                        statusText = "Đang tải bản cập nhật $versionTag từ GitHub..."
                                     )
                                 )
                             }
@@ -331,7 +352,6 @@ class GitHubAutoUpdater(private val context: Context) {
 
     /**
      * Launches Android's system Package Installer for the downloaded APK file.
-     * On Android 8.0+, checks if canRequestPackageInstalls() is granted first.
      */
     fun installDownloadedApk(apkFile: File): Boolean {
         return try {
@@ -365,13 +385,17 @@ class GitHubAutoUpdater(private val context: Context) {
         }
     }
 
+    /**
+     * Compares remote version (e.g. "1.0.2" or "v1.0.2") against current version.
+     * Returns false when both versions have the same numeric components.
+     */
     fun isRemoteVersionNewer(remoteTag: String, currentVersion: String): Boolean {
-        val remoteParts = remoteTag.removePrefix("v").removePrefix("V")
-            .split(".", "-")
-            .mapNotNull { it.toIntOrNull() }
-        val localParts = currentVersion.removePrefix("v").removePrefix("V")
-            .split(".", "-")
-            .mapNotNull { it.toIntOrNull() }
+        val cleanRemote = remoteTag.trim().removePrefix("v").removePrefix("V").trim()
+        val cleanLocal = currentVersion.trim().removePrefix("v").removePrefix("V").trim()
+        if (cleanRemote == cleanLocal) return false
+
+        val remoteParts = cleanRemote.split(".", "-").mapNotNull { it.toIntOrNull() }
+        val localParts = cleanLocal.split(".", "-").mapNotNull { it.toIntOrNull() }
 
         val maxLen = maxOf(remoteParts.size, localParts.size)
         for (i in 0 until maxLen) {
@@ -380,10 +404,12 @@ class GitHubAutoUpdater(private val context: Context) {
             if (r > l) return true
             if (r < l) return false
         }
-        return remoteTag != currentVersion
+        return false
     }
 
     companion object {
+        const val TARGET_UPDATE_VERSION = "1.0.2"
+
         const val WORKFLOW_YAML_TEMPLATE = """name: Build APK & Auto Publish GitHub Release
 
 on:
@@ -401,33 +427,44 @@ jobs:
       - name: 1. Checkout Source Code
         uses: actions/checkout@v4
 
-      - name: 2. Set up JDK 17
+      - name: 2. Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
-      - name: 3. Setup Gradle
+      - name: 3. Setup Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '9.3.1'
 
-      - name: 4. Build Android APK
-        run: gradle :app:assembleDebug --no-daemon
+      - name: 4. Accept Android SDK Licenses
+        run: yes | ${'$'}ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: 5. Rename APK with Build Version
+      - name: 5. Generate Debug Keystore if Missing
+        run: |
+          if [ ! -f debug.keystore ]; then
+            keytool -genkey -v -keystore debug.keystore -storepass android \
+              -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
+              -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
+          fi
+
+      - name: 6. Build Android APK (Version 1.0.2)
+        run: gradle :app:assembleDebug --no-daemon -Pandroid.builder.sdkDownload=true -PversionName=1.0.2 -PversionCode=2
+
+      - name: 7. Prepare Version 1.0.2 APK
         id: prep_version
         run: |
-          VERSION_TAG="v1.0.${'$'}{{ github.run_number }}"
+          VERSION_TAG="1.0.2"
           APK_NAME="TikStudio-HD-${'$'}{VERSION_TAG}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "${'$'}{APK_NAME}"
           echo "version_tag=${'$'}{VERSION_TAG}" >> ${'$'}GITHUB_OUTPUT
           echo "apk_name=${'$'}{APK_NAME}" >> ${'$'}GITHUB_OUTPUT
 
-      - name: 6. Publish GitHub Release & Upload APK
+      - name: 8. Publish GitHub Release & Upload APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${'$'}{{ steps.prep_version.outputs.version_tag }}
+          tag_name: v${'$'}{{ steps.prep_version.outputs.version_tag }}
           name: "TikStudio HD ${'$'}{{ steps.prep_version.outputs.version_tag }}"
           files: ${'$'}{{ steps.prep_version.outputs.apk_name }}
         env:

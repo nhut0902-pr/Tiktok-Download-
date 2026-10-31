@@ -4,28 +4,48 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -33,8 +53,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.BuildConfig
 import com.example.ui.components.DownloadedVaultItemCard
 import com.example.ui.components.EmptyVaultPlaceholder
-import com.example.ui.components.GitHubUpdateNotificationBanner
-import com.example.ui.components.GitHubWorkflowAndUpdateDialog
 import com.example.ui.components.MediaInspectorCard
 import com.example.ui.components.StudioMediaPreviewDialog
 import com.example.ui.components.StudioSettingsBottomSheet
@@ -42,8 +60,12 @@ import com.example.ui.components.StudioTopHeader
 import com.example.ui.components.UrlCommandInputCard
 import com.example.ui.components.VaultHeaderAndFilterRow
 import com.example.ui.theme.ElectricCyan
+import com.example.ui.theme.EmeraldBadge
+import com.example.ui.theme.EmeraldBadgeBg
 import com.example.ui.theme.NeonCoral
 import com.example.ui.theme.StudioBackground
+import com.example.ui.theme.TextPrimary
+import com.example.ui.theme.TextSecondary
 import com.example.ui.viewmodel.TikStudioViewModel
 
 @Composable
@@ -95,8 +117,8 @@ fun TikStudioMainScreen(
                 .background(
                     Brush.radialGradient(
                         colors = listOf(
-                            ElectricCyan.copy(alpha = 0.08f),
-                            NeonCoral.copy(alpha = 0.04f),
+                            ElectricCyan.copy(alpha = 0.06f),
+                            NeonCoral.copy(alpha = 0.03f),
                             StudioBackground
                         ),
                         center = Offset(300f, 180f),
@@ -114,19 +136,77 @@ fun TikStudioMainScreen(
                     bottom = innerPadding.calculateBottomPadding() + 28.dp
                 )
             ) {
-                // 1. Top Studio Header
+                // 1. Minimalist Studio Header (Single Settings Button)
                 item(key = "header") {
                     StudioTopHeader(
-                        defaultQuality = settings.defaultQualityTier,
                         hasUpdateAvailable = uiState.githubReleaseInfo?.isNewerThanCurrent == true,
-                        onOpenGitHubUpdater = { viewModel.openGitHubWorkflowDialog() },
-                        onOpenSettings = { viewModel.openSettingsSheet() }
+                        onOpenSettings = { viewModel.openSettingsSheet(0) }
                     )
                 }
 
-                // 2. URL & Clipboard Command Bar + Instant Coil Thumbnail Preview + Sample Showcase Chips
+                // 2. Compact 1-Line Update Notification Pill (Opens Settings -> Update Tab)
+                val releaseInfo = uiState.githubReleaseInfo
+                if (releaseInfo != null && releaseInfo.isNewerThanCurrent && !uiState.isUpdateBannerDismissed) {
+                    item(key = "github_update_banner") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 4.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(EmeraldBadgeBg)
+                                .border(1.dp, EmeraldBadge.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
+                                .clickable { viewModel.openSettingsSheet(1) }
+                                .padding(horizontal = 12.dp, vertical = 8.dp)
+                                .testTag("github_update_banner"),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(26.dp)
+                                        .clip(CircleShape)
+                                        .background(EmeraldBadge.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.SystemUpdate,
+                                        contentDescription = null,
+                                        tint = EmeraldBadge,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                                Text(
+                                    text = "Có bản cập nhật ${releaseInfo.versionTag} từ GitHub • Nhấn để tải tự động",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextPrimary
+                                )
+                            }
+
+                            IconButton(
+                                onClick = { viewModel.dismissUpdateBanner() },
+                                modifier = Modifier.size(24.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Đóng",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // 3. URL & Clipboard Command Bar + Instant Coil Thumbnail Preview
                 item(key = "url_command_bar") {
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
                     UrlCommandInputCard(
                         urlInput = uiState.urlInput,
                         isUrlValid = uiState.isUrlValid,
@@ -147,27 +227,10 @@ fun TikStudioMainScreen(
                     )
                 }
 
-                // 3. GitHub Auto-Update Notification Banner (shown when new GitHub Release APK is ready)
-                val releaseInfo = uiState.githubReleaseInfo
-                if (releaseInfo != null && releaseInfo.isNewerThanCurrent && !uiState.isUpdateBannerDismissed) {
-                    item(key = "github_update_banner") {
-                        Spacer(modifier = Modifier.height(10.dp))
-                        GitHubUpdateNotificationBanner(
-                            release = releaseInfo,
-                            currentVersionName = BuildConfig.VERSION_NAME,
-                            apkDownloadProgress = uiState.apkUpdateDownloadProgress,
-                            onStartAutoUpdate = { viewModel.startAutoUpdateAndInstallApk() },
-                            onInstallReadyApk = { viewModel.installReadyApk() },
-                            onOpenWorkflowDialog = { viewModel.openGitHubWorkflowDialog() },
-                            onDismissBanner = { viewModel.dismissUpdateBanner() }
-                        )
-                    }
-                }
-
                 // 4. Dynamic Media Inspector Card (Video 1080p/720p/MP3 or Photo Carousel)
                 uiState.inspectedMedia?.let { media ->
                     item(key = "media_inspector_${media.id}") {
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(14.dp))
                         MediaInspectorCard(
                             media = media,
                             customOptions = uiState.customOptions,
@@ -194,7 +257,7 @@ fun TikStudioMainScreen(
 
                 // 5. Recent Downloads Vault Header & Filter Chips
                 item(key = "vault_header") {
-                    Spacer(modifier = Modifier.height(22.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                     VaultHeaderAndFilterRow(
                         totalCount = totalCount,
                         selectedFilter = uiState.selectedVaultFilter,
@@ -226,38 +289,30 @@ fun TikStudioMainScreen(
         }
     }
 
-    // Settings Bottom Sheet
+    // Unified Settings & App Update Bottom Sheet
     if (uiState.isSettingsSheetOpen) {
         StudioSettingsBottomSheet(
             settings = settings,
+            currentVersionName = uiState.currentVersionName,
+            releaseInfo = uiState.githubReleaseInfo,
+            isCheckingUpdate = uiState.isCheckingGitHubUpdate,
+            apkDownloadProgress = uiState.apkUpdateDownloadProgress,
+            initialTab = uiState.settingsInitialTab,
             onDismiss = { viewModel.closeSettingsSheet() },
             onSelectDefaultQuality = { viewModel.setDefaultQuality(it) },
             onToggleForceNoWatermark = { viewModel.setForceNoWatermark(it) },
             onToggleAutoDetectClipboard = { viewModel.setAutoDetectClipboard(it) },
             onToggleSaveToGallery = { viewModel.setSaveToPublicGallery(it) },
             onToggleIncludeMp3WithCarousel = { viewModel.setIncludeMp3WithCarousel(it) },
-            onSelectNamingRule = { viewModel.setFileNamingRule(it) }
-        )
-    }
-
-    // GitHub CI/CD Workflow & Auto-Update Modal
-    if (uiState.isGitHubWorkflowDialogOpen) {
-        GitHubWorkflowAndUpdateDialog(
-            githubRepoSlug = settings.githubRepoSlug,
-            autoCheckEnabled = settings.autoCheckGitHubUpdate,
-            currentVersionName = BuildConfig.VERSION_NAME,
-            releaseInfo = uiState.githubReleaseInfo,
-            isCheckingUpdate = uiState.isCheckingGitHubUpdate,
-            apkDownloadProgress = uiState.apkUpdateDownloadProgress,
+            onSelectNamingRule = { viewModel.setFileNamingRule(it) },
             onUpdateRepoSlug = { viewModel.setGitHubRepoSlug(it) },
-            onToggleAutoCheck = { viewModel.setAutoCheckGitHubUpdate(it) },
+            onToggleAutoCheckUpdate = { viewModel.setAutoCheckGitHubUpdate(it) },
             onCheckLatestRelease = { viewModel.checkForGitHubUpdates(repoOverride = it) },
             onStartAutoUpdate = { viewModel.startAutoUpdateAndInstallApk() },
             onInstallReadyApk = { viewModel.installReadyApk() },
             onCopyWorkflowYaml = { yaml ->
                 copyTextToClipboard(context, yaml)
-            },
-            onDismiss = { viewModel.closeGitHubWorkflowDialog() }
+            }
         )
     }
 

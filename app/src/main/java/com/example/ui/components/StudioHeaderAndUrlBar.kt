@@ -1,10 +1,8 @@
 package com.example.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,17 +26,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.HighQuality
-import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.PlayCircleFilled
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoFile
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -67,7 +63,6 @@ import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.example.data.model.SampleTikTokLink
 import com.example.data.model.ValidatedThumbnailPreview
-import com.example.data.model.VideoQualityTier
 import com.example.ui.theme.ElectricCyan
 import com.example.ui.theme.EmeraldBadge
 import com.example.ui.theme.EmeraldBadgeBg
@@ -86,57 +81,53 @@ import com.example.util.FormatUtils
 
 @Composable
 fun StudioTopHeader(
-    defaultQuality: VideoQualityTier,
     hasUpdateAvailable: Boolean,
-    onOpenGitHubUpdater: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 10.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.weight(1f)
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Dual-tone Neon Studio Emblem
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(13.dp))
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
                     .background(
                         Brush.linearGradient(
-                            colors = listOf(Color(0xFF172233), Color(0xFF281326))
+                            colors = listOf(ElectricCyan.copy(alpha = 0.2f), NeonCoral.copy(alpha = 0.2f))
                         )
                     )
                     .border(
-                        width = 1.5.dp,
+                        width = 1.dp,
                         brush = Brush.linearGradient(listOf(ElectricCyan, NeonCoral)),
-                        shape = RoundedCornerShape(13.dp)
+                        shape = RoundedCornerShape(12.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Filled.HighQuality,
-                    contentDescription = "Biểu tượng TikStudio HD",
+                    contentDescription = "TikStudio HD",
                     tint = ElectricCyan,
                     modifier = Modifier.size(22.dp)
                 )
             }
 
-            Column(modifier = Modifier.weight(1f)) {
+            Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
                         text = "TikStudio HD",
-                        style = MaterialTheme.typography.headlineMedium,
+                        style = MaterialTheme.typography.titleLarge,
                         color = TextPrimary,
                         fontWeight = FontWeight.Bold
                     )
@@ -144,90 +135,50 @@ fun StudioTopHeader(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(EmeraldBadgeBg)
-                            .border(1.dp, EmeraldBadge.copy(alpha = 0.45f), RoundedCornerShape(6.dp))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "NO LOGO",
-                            fontFamily = JetBrainsMonoFamily,
-                            fontSize = 9.sp,
+                            text = "No Logo",
+                            style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = EmeraldBadge
                         )
                     }
                 }
                 Text(
-                    text = "Tải Video & Ảnh TikTok Không Logo • HD / Full HD",
+                    text = "Tải Video & Ảnh TikTok Full HD",
                     style = MaterialTheme.typography.bodyMedium,
                     fontSize = 12.sp,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    color = TextSecondary
                 )
             }
         }
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        // Single Unified Settings & Update Hub Button
+        Surface(
+            onClick = onOpenSettings,
+            shape = RoundedCornerShape(12.dp),
+            color = StudioSurface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
+            modifier = Modifier
+                .size(44.dp)
+                .testTag("settings_button")
         ) {
-            // GitHub Auto-Update & CI/CD Pill Button
-            Surface(
-                onClick = onOpenGitHubUpdater,
-                shape = RoundedCornerShape(12.dp),
-                color = if (hasUpdateAvailable) EmeraldBadgeBg else StudioElevatedSurface,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (hasUpdateAvailable) EmeraldBadge else StudioCardBorder
-                ),
-                modifier = Modifier.testTag("github_update_header_button")
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.CloudSync,
-                        contentDescription = "Cập nhật APK từ GitHub",
-                        tint = if (hasUpdateAvailable) EmeraldBadge else ElectricCyan,
-                        modifier = Modifier.size(17.dp)
-                    )
-                    Text(
-                        text = if (hasUpdateAvailable) "UPDATE" else "GITHUB",
-                        fontFamily = JetBrainsMonoFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp,
-                        color = if (hasUpdateAvailable) EmeraldBadge else TextPrimary
-                    )
-                }
-            }
-
-            // Custom Quality & Studio Settings Pill Button
-            Surface(
-                onClick = onOpenSettings,
-                shape = RoundedCornerShape(12.dp),
-                color = StudioElevatedSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
-                modifier = Modifier.testTag("settings_button")
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Tune,
-                        contentDescription = "Tuỳ chỉnh chất lượng tải",
-                        tint = ElectricCyan,
-                        modifier = Modifier.size(17.dp)
-                    )
-                    Text(
-                        text = if (defaultQuality == VideoQualityTier.FULL_HD_1080P) "1080P" else "720P",
-                        fontFamily = JetBrainsMonoFamily,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 10.sp,
-                        color = GoldBadge
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    imageVector = Icons.Filled.Settings,
+                    contentDescription = "Cài đặt & Cập nhật ứng dụng",
+                    tint = TextPrimary,
+                    modifier = Modifier.size(20.dp)
+                )
+                if (hasUpdateAvailable) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .offset(x = (-9).dp, y = 9.dp)
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(EmeraldBadge)
                     )
                 }
             }
@@ -256,91 +207,51 @@ fun UrlCommandInputCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(22.dp))
             .background(StudioSurface)
-            .border(
-                width = 1.2.dp,
-                brush = Brush.horizontalGradient(
-                    colors = listOf(
-                        ElectricCyan.copy(alpha = 0.65f),
-                        StudioCardBorder,
-                        NeonCoral.copy(alpha = 0.65f)
-                    )
-                ),
-                shape = RoundedCornerShape(20.dp)
-            )
+            .border(1.dp, StudioCardBorder, RoundedCornerShape(22.dp))
             .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
+        // Minimal Input Header + URL Valid Badge
+        if (isUrlValid) {
             Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Icon(
-                    imageVector = Icons.Filled.Link,
-                    contentDescription = null,
-                    tint = ElectricCyan,
-                    modifier = Modifier.size(18.dp)
-                )
                 Text(
-                    text = "LIÊN KẾT TIKTOK (VIDEO HOẶC BỘ ẢNH)",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = ElectricCyan,
-                    fontWeight = FontWeight.Bold
+                    text = "Đã nhận diện liên kết TikTok",
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontSize = 12.sp,
+                    color = TextSecondary
                 )
-            }
-
-            if (isUrlValid) {
-                Box(
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
                         .background(EmeraldBadgeBg)
-                        .border(1.dp, EmeraldBadge.copy(alpha = 0.6f), RoundedCornerShape(6.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                         .testTag("url_valid_badge")
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.CheckCircle,
-                            contentDescription = null,
-                            tint = EmeraldBadge,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Text(
-                            text = "URL HỢP LỆ",
-                            fontFamily = JetBrainsMonoFamily,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = EmeraldBadge
-                        )
-                    }
-                }
-            } else {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(GoldBadgeBg)
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
+                    Icon(
+                        imageVector = Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = EmeraldBadge,
+                        modifier = Modifier.size(12.dp)
+                    )
                     Text(
-                        text = "HỖ TRỢ 1080P 60FPS",
+                        text = "URL HỢP LỆ",
                         fontFamily = JetBrainsMonoFamily,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = GoldBadge
+                        color = EmeraldBadge
                     )
                 }
             }
         }
-
-        Spacer(modifier = Modifier.height(10.dp))
 
         OutlinedTextField(
             value = urlInput,
@@ -350,7 +261,7 @@ fun UrlCommandInputCard(
                 .testTag("url_input_field"),
             placeholder = {
                 Text(
-                    text = "Dán link TikTok (vt.tiktok.com / tiktok.com/@user/video/...)",
+                    text = "Dán link video hoặc bộ ảnh TikTok...",
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextMuted
                 )
@@ -381,14 +292,14 @@ fun UrlCommandInputCard(
                 focusedContainerColor = StudioElevatedSurface,
                 unfocusedContainerColor = StudioElevatedSurface,
                 focusedBorderColor = if (isUrlValid) EmeraldBadge else ElectricCyan,
-                unfocusedBorderColor = if (isUrlValid) EmeraldBadge.copy(alpha = 0.6f) else StudioCardBorder,
+                unfocusedBorderColor = if (isUrlValid) EmeraldBadge.copy(alpha = 0.5f) else StudioCardBorder,
                 cursorColor = ElectricCyan
             )
         )
 
         // Immediate Coil Thumbnail Preview shown right after URL validation
         if (isUrlValid && validatedThumbnailPreview != null) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(10.dp))
             ValidatedUrlThumbnailPreviewBox(
                 preview = validatedThumbnailPreview,
                 onPreviewClick = onThumbnailPreviewClick
@@ -397,7 +308,7 @@ fun UrlCommandInputCard(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Action Row: Paste from Clipboard + Inspect URL
+        // Clean 2-Button Action Row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -407,24 +318,23 @@ fun UrlCommandInputCard(
                 onClick = onPasteClick,
                 shape = RoundedCornerShape(12.dp),
                 color = StudioElevatedSurface,
-                border = androidx.compose.foundation.BorderStroke(1.dp, ElectricCyan.copy(alpha = 0.45f)),
+                border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
                 modifier = Modifier
                     .weight(1f)
-                    .height(48.dp)
+                    .height(46.dp)
                     .testTag("paste_button")
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Icon(
                         imageVector = Icons.Filled.ContentPaste,
-                        contentDescription = "Dán từ bộ nhớ tạm",
+                        contentDescription = "Dán link",
                         tint = ElectricCyan,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = "Dán Link",
                         style = MaterialTheme.typography.labelLarge,
@@ -444,18 +354,18 @@ fun UrlCommandInputCard(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 modifier = Modifier
                     .weight(1.25f)
-                    .height(48.dp)
+                    .height(46.dp)
                     .testTag("analyze_button")
             ) {
                 if (isInspecting) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(18.dp),
-                        strokeWidth = 2.2.dp,
+                        modifier = Modifier.size(16.dp),
+                        strokeWidth = 2.dp,
                         color = Color(0xFF001F24)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Đang tách...",
+                        text = "Đang xử lý...",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -463,11 +373,11 @@ fun UrlCommandInputCard(
                     Icon(
                         imageVector = Icons.Filled.Search,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(17.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Phân Tích HD",
+                        text = "Phân Tích",
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold
                     )
@@ -475,54 +385,42 @@ fun UrlCommandInputCard(
             }
         }
 
-        // Quick Showcase Sample Chips so user can test Video 1080p vs Photo Carousel immediately
+        // Minimal Sample Pills
         Spacer(modifier = Modifier.height(12.dp))
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.AutoAwesome,
-                contentDescription = null,
-                tint = GoldBadge,
-                modifier = Modifier.size(14.dp)
-            )
-            Text(
-                text = "Thử nhanh mẫu Không Logo:",
-                style = MaterialTheme.typography.bodyMedium,
-                fontSize = 12.sp,
-                color = TextSecondary
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Text(
+                text = "Mẫu thử:",
+                style = MaterialTheme.typography.bodyMedium,
+                fontSize = 11.sp,
+                color = TextMuted
+            )
             sampleLinks.forEachIndexed { index, sample ->
                 val isSelected = urlInput == sample.url
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(
-                            if (isSelected) ElectricCyan.copy(alpha = 0.16f)
+                            if (isSelected) ElectricCyan.copy(alpha = 0.14f)
                             else StudioElevatedSurface
                         )
                         .border(
                             width = 1.dp,
-                            color = if (isSelected) ElectricCyan else StudioCardBorder,
-                            shape = RoundedCornerShape(10.dp)
+                            color = if (isSelected) ElectricCyan.copy(alpha = 0.6f) else StudioCardBorder,
+                            shape = RoundedCornerShape(8.dp)
                         )
                         .clickable { onSelectSample(sample) }
-                        .padding(horizontal = 10.dp, vertical = 7.dp)
+                        .padding(horizontal = 9.dp, vertical = 5.dp)
                         .testTag("sample_chip_$index")
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Icon(
                             imageVector = if (sample.isPhotoCarousel) {
@@ -532,21 +430,21 @@ fun UrlCommandInputCard(
                             },
                             contentDescription = null,
                             tint = if (sample.isPhotoCarousel) NeonCoral else ElectricCyan,
-                            modifier = Modifier.size(15.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                         Text(
                             text = sample.label,
                             style = MaterialTheme.typography.bodyMedium,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = if (isSelected) ElectricCyan else TextPrimary
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = if (isSelected) ElectricCyan else TextSecondary
                         )
                     }
                 }
             }
         }
 
-        // Status / Telemetry feedback banner
+        // Subtle Status Feedback
         AnimatedVisibility(
             visible = !statusMessage.isNullOrBlank(),
             enter = fadeIn(),
@@ -554,37 +452,27 @@ fun UrlCommandInputCard(
         ) {
             statusMessage?.let { msg ->
                 Spacer(modifier = Modifier.height(10.dp))
-                Box(
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(
-                            if (isStatusError) Color(0xFF36151E) else EmeraldBadgeBg
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = if (isStatusError) NeonCoral else EmeraldBadge.copy(alpha = 0.6f),
-                            shape = RoundedCornerShape(10.dp)
-                        )
-                        .padding(horizontal = 12.dp, vertical = 9.dp)
+                        .background(if (isStatusError) Color(0xFF2D141C) else EmeraldBadgeBg)
+                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(if (isStatusError) NeonCoral else EmeraldBadge)
-                        )
-                        Text(
-                            text = msg,
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontSize = 12.sp,
-                            color = if (isStatusError) Color(0xFFFFB2C1) else Color(0xFFA7F3D0)
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(if (isStatusError) NeonCoral else EmeraldBadge)
+                    )
+                    Text(
+                        text = msg,
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontSize = 12.sp,
+                        color = if (isStatusError) Color(0xFFFFB2C1) else Color(0xFFA7F3D0)
+                    )
                 }
             }
         }
@@ -592,7 +480,7 @@ fun UrlCommandInputCard(
 }
 
 /**
- * Displays the TikTok video's cover image immediately after the URL is validated using Coil.
+ * Compact, refined Coil thumbnail preview displayed immediately after URL validation.
  */
 @Composable
 fun ValidatedUrlThumbnailPreviewBox(
@@ -605,22 +493,20 @@ fun ValidatedUrlThumbnailPreviewBox(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(StudioElevatedSurface)
-            .border(1.dp, EmeraldBadge.copy(alpha = 0.55f), RoundedCornerShape(14.dp))
+            .border(1.dp, StudioCardBorder, RoundedCornerShape(12.dp))
             .clickable { onPreviewClick() }
-            .padding(10.dp)
+            .padding(8.dp)
             .testTag("url_thumbnail_preview"),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Coil Cover Image Thumbnail with crossfade and loading/error handling
         Box(
             modifier = Modifier
-                .size(width = 76.dp, height = 96.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(StudioBackground)
-                .border(1.dp, ElectricCyan.copy(alpha = 0.5f), RoundedCornerShape(10.dp)),
+                .size(width = 58.dp, height = 72.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(StudioBackground),
             contentAlignment = Alignment.Center
         ) {
             SubcomposeAsyncImage(
@@ -628,7 +514,7 @@ fun ValidatedUrlThumbnailPreviewBox(
                     .data(preview.coverImageUrl)
                     .crossfade(true)
                     .build(),
-                contentDescription = "Ảnh bìa xem trước TikTok: ${preview.title}",
+                contentDescription = preview.title,
                 contentScale = ContentScale.Crop,
                 loading = {
                     Box(
@@ -636,8 +522,8 @@ fun ValidatedUrlThumbnailPreviewBox(
                         contentAlignment = Alignment.Center
                     ) {
                         CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 1.8.dp,
                             color = ElectricCyan
                         )
                     }
@@ -647,72 +533,47 @@ fun ValidatedUrlThumbnailPreviewBox(
                     .testTag("validated_thumbnail_image")
             )
 
-            // Subtle dark overlay + play indicator
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.22f))
+                    .background(Color.Black.copy(alpha = 0.2f))
             )
 
             Icon(
                 imageVector = Icons.Filled.PlayCircleFilled,
                 contentDescription = null,
                 tint = Color.White.copy(alpha = 0.9f),
-                modifier = Modifier.size(26.dp)
+                modifier = Modifier.size(22.dp)
             )
-
-            // Duration pill at bottom right
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(4.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color.Black.copy(alpha = 0.75f))
-                    .padding(horizontal = 4.dp, vertical = 1.dp)
-            ) {
-                Text(
-                    text = FormatUtils.formatDuration(preview.durationSeconds),
-                    fontFamily = JetBrainsMonoFamily,
-                    fontSize = 9.sp,
-                    color = TextPrimary
-                )
-            }
         }
 
-        // Validated Video / Photo Metadata
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
+                Text(
+                    text = preview.authorName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.sp,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(5.dp))
-                        .background(EmeraldBadgeBg)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = "ẢNH BÌA XEM TRƯỚC",
-                        fontFamily = JetBrainsMonoFamily,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = EmeraldBadge
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(5.dp))
+                        .clip(RoundedCornerShape(4.dp))
                         .background(GoldBadgeBg)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
                     Text(
                         text = preview.resolutionBadge,
                         fontFamily = JetBrainsMonoFamily,
-                        fontSize = 9.sp,
+                        fontSize = 8.sp,
                         fontWeight = FontWeight.Bold,
                         color = GoldBadge
                     )
@@ -722,19 +583,17 @@ fun ValidatedUrlThumbnailPreviewBox(
             Text(
                 text = preview.title,
                 style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                fontSize = 12.sp,
+                color = TextSecondary,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
             Text(
-                text = "${preview.authorName} (${preview.authorHandle}) • ID #${preview.videoId.takeLast(6)}",
+                text = "${preview.authorHandle} • ${FormatUtils.formatDuration(preview.durationSeconds)}",
                 fontFamily = JetBrainsMonoFamily,
                 fontSize = 10.sp,
-                color = ElectricCyan,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                color = ElectricCyan
             )
         }
     }
