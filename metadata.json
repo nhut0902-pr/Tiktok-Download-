@@ -1,0 +1,6 @@
+{
+  "name": "TikStudio HD",
+  "description": "Ứng dụng tải video và ảnh slideshow từ TikTok không dính logo (No Watermark) chất lượng cao HD, Full HD 1080p và nhạc MP3.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

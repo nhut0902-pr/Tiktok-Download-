@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">TikStudio HD</string>
+    <string name="studio_subtitle">Tải Video &amp; Ảnh TikTok Không Logo • HD / Full HD</string>
+    <string name="paste_link_hint">Dán link TikTok video hoặc ảnh vào đây...</string>
+    <string name="paste_button">Dán link</string>
+    <string name="analyze_button">Phân tích</string>
+    <string name="no_watermark_badge">KHÔNG LOGO</string>
+    <string name="full_hd_badge">FULL HD 1080P</string>
+    <string name="hd_badge">HD 720P</string>
+    <string name="download_now">Tải xuống ngay</string>
+    <string name="recent_downloads">Kho lưu trữ đã tải</string>
+    <string name="empty_vault_title">Chưa có video hoặc ảnh nào</string>
+    <string name="empty_vault_subtitle">Dán liên kết TikTok ở trên hoặc chọn link mẫu để tải video Full HD không logo và bộ ảnh chất lượng gốc.</string>
+    <string name="settings_title">Tuỳ chỉnh chất lượng &amp; Tải xuống</string>
+</resources>
