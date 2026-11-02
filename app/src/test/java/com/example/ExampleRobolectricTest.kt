@@ -44,27 +44,23 @@ class ExampleRobolectricTest {
         assertEquals("https://vt.tiktok.com/ZS8N9vK2p/", extracted)
         assertNull(repo.extractTikTokUrlFromClipboard("Hello world 12345"))
 
-        // Verify immediate thumbnail preview resolution upon URL validation
         val immediatePreview = repo.getImmediateThumbnailPreview(
             "https://www.tiktok.com/@cinema.vietnam/video/7398451029384719632"
         )
         assertNotNull(immediatePreview)
         assertTrue(immediatePreview!!.coverImageUrl.isNotBlank())
 
-        // Verify Full HD 1080p & HD 720p No-Watermark stream resolution + Hashtag/Viral script extraction
         val videoInfo = repo.inspectTikTokUrl("https://www.tiktok.com/@cinema.vietnam/video/7398451029384719632").getOrThrow()
         assertTrue(videoInfo.streams.any { it.tier == VideoQualityTier.FULL_HD_1080P && it.tier.isNoWatermark })
         assertTrue(videoInfo.streams.any { it.tier == VideoQualityTier.HD_720P && it.tier.isNoWatermark })
         assertTrue(videoInfo.extractedHashtags.isNotEmpty())
         assertTrue(videoInfo.buildViralRepostCaption().contains(videoInfo.authorHandle))
 
-        // Verify Batch Multi-Link URL extraction
         val batchUrls = repo.extractAllTikTokUrls(
             "Link 1: https://vt.tiktok.com/ZS8N9vK2p/\nLink 2: https://www.tiktok.com/@cinema.vietnam/video/7398451029384719632"
         )
         assertEquals(2, batchUrls.size)
 
-        // Verify GitHub version 1.0.3 comparison and Gradle 9.3.1 in workflow template
         val updater = GitHubAutoUpdater(context)
         assertEquals("1.0.3", GitHubAutoUpdater.TARGET_UPDATE_VERSION)
         assertEquals("1.0.3", updater.normalizeVersionTag("v1.0.3"))
@@ -74,6 +70,7 @@ class ExampleRobolectricTest {
         org.junit.Assert.assertFalse(updater.isRemoteVersionNewer("1.0.3", "1.0.3"))
         org.junit.Assert.assertFalse(updater.isRemoteVersionNewer("v1.0.3", "1.0.3"))
         assertTrue(GitHubAutoUpdater.WORKFLOW_YAML_TEMPLATE.contains("9.3.1"))
+        assertTrue(GitHubAutoUpdater.WORKFLOW_YAML_TEMPLATE.contains("debug.keystore.base64"))
     }
 
     @Test
@@ -111,7 +108,6 @@ class ExampleRobolectricTest {
         composeTestRule.onNodeWithTag("url_thumbnail_preview")
             .assertIsDisplayed()
 
-        // Open unified Settings button and switch to Update tab (tab index 2)
         composeTestRule.onNodeWithTag("settings_button")
             .performClick()
         composeTestRule.waitForIdle()
@@ -123,9 +119,17 @@ class ExampleRobolectricTest {
     }
 
     @Test
-    fun `displays TikTok in-app shortcut and auto-scroll feature controls`() {
+    fun `switches to dedicated Cac Tien Ich tab and downloads TikTok shortcut utility`() {
+        composeTestRule.onNodeWithTag("main_tab_1")
+            .performClick()
+        composeTestRule.waitForIdle()
+
         composeTestRule.onNodeWithTag("tiktok_shortcut_feature_card")
             .assertExists()
+        composeTestRule.onNodeWithTag("download_tiktok_utility_button")
+            .performClick()
+        composeTestRule.waitForIdle()
+
         composeTestRule.onNodeWithTag("toggle_floating_shortcut_button")
             .assertExists()
         composeTestRule.onNodeWithTag("launch_tiktok_app_button")
@@ -133,10 +137,67 @@ class ExampleRobolectricTest {
         composeTestRule.onNodeWithTag("toggle_auto_scroll_button")
             .assertExists()
         composeTestRule.onNodeWithTag("test_swipe_next_button")
+            .performClick()
+        composeTestRule.waitForIdle()
+    }
+
+    @Test
+    fun `displays Screen Recorder Utility V1_0_3 in Cac Tien Ich tab with Radial Menu and 4K Quality Dialog`() {
+        composeTestRule.onNodeWithTag("header_version_v103_badge")
             .assertExists()
 
-        // Verify tapping test swipe next triggers gesture handler safely
-        composeTestRule.onNodeWithTag("test_swipe_next_button")
+        // Switch to "Các tiện ích" tab
+        composeTestRule.onNodeWithTag("main_tab_1")
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("screen_recorder_utility_card")
+            .assertExists()
+        composeTestRule.onNodeWithTag("version_v103_badge")
+            .assertExists()
+
+        // Download & install Screen Recorder utility first
+        composeTestRule.onNodeWithTag("install_screen_utility_button")
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify XRecorder-style notification bar (Record | Screenshot | Tools | Home | Exit) & Radial Menu
+        composeTestRule.onNodeWithTag("xrecorder_notification_toolbar")
+            .assertExists()
+        composeTestRule.onNodeWithTag("floating_edge_camcorder_bubble")
+            .assertExists()
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify Radial Arc Fan-Out Menu with 5 buttons & X close button
+        composeTestRule.onNodeWithTag("floating_radial_fan_menu")
+            .assertExists()
+        composeTestRule.onNodeWithTag("radial_btn_record")
+            .assertExists()
+        composeTestRule.onNodeWithTag("radial_btn_screenshot")
+            .assertExists()
+        composeTestRule.onNodeWithTag("radial_btn_close_x")
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        // Open 4K Quality Selector Dialog and start recording
+        composeTestRule.onNodeWithTag("start_screen_recording_button")
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        composeTestRule.onNodeWithTag("quality_selector_dialog")
+            .assertExists()
+        composeTestRule.onNodeWithTag("confirm_quality_start_recording_button")
+            .performClick()
+        composeTestRule.waitForIdle()
+
+        // Verify Mini Pop-up Control Bar appears when recording
+        composeTestRule.onNodeWithTag("screen_recorder_mini_popup")
+            .assertExists()
+        composeTestRule.onNodeWithTag("mini_popup_pause_resume_button")
+            .performClick()
+        composeTestRule.waitForIdle()
+        composeTestRule.onNodeWithTag("mini_popup_stop_button")
             .performClick()
         composeTestRule.waitForIdle()
     }

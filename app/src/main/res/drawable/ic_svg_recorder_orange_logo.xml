@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="44dp"
+    android:height="44dp"
+    android:viewportWidth="44"
+    android:viewportHeight="44">
+    <!-- Orange rounded squircle background -->
+    <path
+        android:fillColor="#F97316"
+        android:pathData="M12,2h20c5.52,0 10,4.48 10,10v20c0,5.52 -4.48,10 -10,10H12C6.48,42 2,37.52 2,32V12C2,6.48 6.48,2 12,2z" />
+    <!-- White video camera body -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M11,13h15c2.21,0 4,1.79 4,4v10c0,2.21 -1.79,4 -4,4H11c-2.21,0 -4,-1.79 -4,-4V17c0,-2.21 1.79,-4 4,-4z" />
+    <!-- White camera lens cone on right -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M31,18.5l5.5,-3.5c0.67,-0.42 1.5,0.06 1.5,0.85v12.3c0,0.79 -0.83,1.27 -1.5,0.85L31,25.5v-7z" />
+    <!-- Red record dot inside camera -->
+    <path
+        android:fillColor="#EF4444"
+        android:pathData="M18.5,22m-4.8,0a4.8,4.8 0,1 1,9.6 0a4.8,4.8 0,1 1,-9.6 0" />
+</vector>

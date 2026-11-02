@@ -17,4 +17,7 @@
     <string name="floating_service_notification_channel">Phím tắt TikTok &amp; Tự động lướt</string>
     <string name="floating_service_notification_title">TikStudio HD • Phím tắt TikTok đang chạy</string>
     <string name="floating_service_notification_text">Nhấn vào phím tắt nổi trong TikTok để tải nhanh và tự động chuyển video.</string>
+    <string name="screen_recorder_channel_name">Tiện ích Quay Video Màn Hình Nền</string>
+    <string name="screen_recorder_notification_title">TikStudio HD V1.0.3 • Đang quay màn hình nền</string>
+    <string name="screen_recorder_notification_text">Đang ghi hình màn hình &amp; thu âm Mic dưới nền cho các ứng dụng khác.</string>
 </resources>

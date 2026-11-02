@@ -5,10 +5,8 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.Settings
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,22 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.AccessibilityNew
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Layers
-import androidx.compose.material.icons.filled.OpenInNew
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,6 +35,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.R
 import com.example.data.preferences.StudioSettings
 import com.example.service.FloatingTikTokShortcutService
 import com.example.service.TikAutoScrollAccessibilityService
@@ -67,10 +53,12 @@ import com.example.ui.theme.TextSecondary
 @Composable
 fun TikTokShortcutFeatureSection(
     settings: StudioSettings,
+    isUtilityDownloaded: Boolean,
     isFloatingShortcutActive: Boolean,
     isAccessibilityActive: Boolean,
     isAutoScrolling: Boolean,
     autoScrollCountdown: Int,
+    onDownloadUtility: () -> Unit,
     onToggleFloatingShortcut: () -> Unit,
     onToggleAutoScroll: () -> Unit,
     onTestSwipeNext: () -> Unit,
@@ -96,7 +84,7 @@ fun TikTokShortcutFeatureSection(
             .padding(14.dp)
             .testTag("tiktok_shortcut_feature_card")
     ) {
-        // Header Row: Title & Badge
+        // Header Row: SVG Graphic, Title & Badge
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -104,21 +92,20 @@ fun TikTokShortcutFeatureSection(
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
                 modifier = Modifier.weight(1f)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
                         .background(ElectricCyan.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Bolt,
-                        contentDescription = null,
+                    SvgDrawableGraphic(
+                        drawableResId = R.drawable.ic_svg_tiktok_shortcut,
                         tint = ElectricCyan,
-                        modifier = Modifier.size(20.dp)
+                        size = 20.dp
                     )
                 }
                 Column {
@@ -127,7 +114,7 @@ fun TikTokShortcutFeatureSection(
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
                         Text(
-                            text = "Phím tắt trong TikTok",
+                            text = "Tiện ích Phím tắt TikTok & Tự động lướt",
                             style = MaterialTheme.typography.titleMedium,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
@@ -140,7 +127,8 @@ fun TikTokShortcutFeatureSection(
                                 .padding(horizontal = 6.dp, vertical = 1.dp)
                         ) {
                             Text(
-                                text = "MỚI",
+                                text = "V1.0.3",
+                                fontFamily = JetBrainsMonoFamily,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
                                 color = ElectricCyan
@@ -159,197 +147,298 @@ fun TikTokShortcutFeatureSection(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        // Permission Status Badges Row
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
-            // Overlay Permission Chip
-            StatusPermissionChip(
-                icon = Icons.Filled.Layers,
-                label = if (hasOverlayPermission) "Bong bóng nổi: Đã cấp" else "Bong bóng: Cần cấp quyền",
-                isGranted = hasOverlayPermission,
-                onClick = {
-                    if (!hasOverlayPermission) {
-                        requestOverlayPermission(context)
-                    }
-                },
-                modifier = Modifier.weight(1f)
-            )
-
-            // Accessibility Permission Chip
-            StatusPermissionChip(
-                icon = Icons.Filled.AccessibilityNew,
-                label = if (hasAccessibilityPermission) "Tự động vuốt: Đã bật" else "Trợ năng: Cần bật",
-                isGranted = hasAccessibilityPermission,
-                onClick = {
-                    if (!hasAccessibilityPermission) {
-                        requestAccessibilityPermission(context)
-                    }
-                },
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Main CTA Buttons: Toggle Floating Shortcut & Launch TikTok
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Button(
-                onClick = onToggleFloatingShortcut,
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isFloatingShortcutActive) EmeraldBadge else ElectricCyan,
-                    contentColor = Color(0xFF001F24)
-                ),
-                contentPadding = PaddingValues(vertical = 10.dp, horizontal = 12.dp),
+        if (!isUtilityDownloaded) {
+            // REQUIRED DOWNLOAD GATE BEFORE USING THIS UTILITY
+            Column(
                 modifier = Modifier
-                    .weight(1f)
-                    .testTag("toggle_floating_shortcut_button")
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF0F172A))
+                    .border(1.dp, ElectricCyan.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Icon(
-                    imageVector = if (isFloatingShortcutActive) Icons.Filled.CheckCircle else Icons.Filled.Bolt,
-                    contentDescription = null,
-                    modifier = Modifier.size(17.dp)
-                )
-                Spacer(modifier = Modifier.width(6.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Gói tiện ích chưa được tải về máy",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = GoldBadge
+                    )
+                    Text(
+                        text = "2.4 MB • Auto-Scroll",
+                        fontFamily = JetBrainsMonoFamily,
+                        fontSize = 10.sp,
+                        color = ElectricCyan
+                    )
+                }
+
                 Text(
-                    text = if (isFloatingShortcutActive) "Đang bật phím tắt" else "Bật phím tắt TikTok",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp
+                    text = "Muốn sử dụng tính năng tải video bằng phím tắt nổi trong TikTok và tự động lướt chuyển video, bạn cần tải xuống tiện ích này về máy.",
+                    fontSize = 11.sp,
+                    color = TextSecondary,
+                    lineHeight = 15.sp
+                )
+
+                Button(
+                    onClick = onDownloadUtility,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ElectricCyan,
+                        contentColor = Color(0xFF001F24)
+                    ),
+                    contentPadding = PaddingValues(vertical = 11.dp, horizontal = 14.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("download_tiktok_utility_button")
+                ) {
+                    SvgDrawableGraphic(
+                        drawableResId = R.drawable.ic_svg_addon_download,
+                        tint = Color(0xFF001F24),
+                        size = 18.dp
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Tải xuống tiện ích Phím tắt TikTok",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        } else {
+            // UNLOCKED CONTROLS AFTER UTILITY IS DOWNLOADED
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF0F172A))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "✅ Đã tải & kích hoạt tiện ích Phím tắt TikTok V1.0.3",
+                    fontSize = 11.sp,
+                    color = EmeraldBadge,
+                    modifier = Modifier.weight(1f)
+                )
+                Surface(
+                    onClick = onDownloadUtility,
+                    shape = RoundedCornerShape(6.dp),
+                    color = EmeraldBadgeBg,
+                    modifier = Modifier.testTag("download_tiktok_utility_button")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SvgDrawableGraphic(
+                            drawableResId = R.drawable.ic_svg_check_circle,
+                            tint = EmeraldBadge,
+                            size = 12.dp
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Đã tải tiện ích",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = EmeraldBadge
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Permission Status Badges Row (Using SVG)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                StatusPermissionChip(
+                    drawableResId = R.drawable.ic_svg_tab_utilities,
+                    label = if (hasOverlayPermission) "Bong bóng nổi: Đã cấp" else "Bong bóng: Cần cấp quyền",
+                    isGranted = hasOverlayPermission,
+                    onClick = {
+                        if (!hasOverlayPermission) {
+                            requestOverlayPermission(context)
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+
+                StatusPermissionChip(
+                    drawableResId = R.drawable.ic_svg_tiktok_shortcut,
+                    label = if (hasAccessibilityPermission) "Tự động vuốt: Đã bật" else "Trợ năng: Cần bật",
+                    isGranted = hasAccessibilityPermission,
+                    onClick = {
+                        if (!hasAccessibilityPermission) {
+                            requestAccessibilityPermission(context)
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
                 )
             }
 
-            Surface(
-                onClick = onLaunchTikTok,
-                shape = RoundedCornerShape(12.dp),
-                color = StudioBackground,
-                border = androidx.compose.foundation.BorderStroke(1.dp, ElectricCyan.copy(alpha = 0.5f)),
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("launch_tiktok_app_button")
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Main CTA Buttons: Toggle Floating Shortcut & Launch TikTok
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                Button(
+                    onClick = onToggleFloatingShortcut,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isFloatingShortcutActive) EmeraldBadge else ElectricCyan,
+                        contentColor = Color(0xFF001F24)
+                    ),
+                    contentPadding = PaddingValues(vertical = 10.dp, horizontal = 12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("toggle_floating_shortcut_button")
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.OpenInNew,
-                        contentDescription = null,
-                        tint = ElectricCyan,
-                        modifier = Modifier.size(16.dp)
+                    SvgDrawableGraphic(
+                        drawableResId = if (isFloatingShortcutActive) R.drawable.ic_svg_check_circle else R.drawable.ic_svg_tiktok_shortcut,
+                        tint = Color(0xFF001F24),
+                        size = 16.dp
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Mở app TikTok",
+                        text = if (isFloatingShortcutActive) "Đang bật phím tắt" else "Bật phím tắt TikTok",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = ElectricCyan
+                        fontSize = 12.sp
                     )
                 }
-            }
-        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Secondary Actions: Hands-Free Auto-Scroll & Test Next Swipe
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Surface(
-                onClick = onToggleAutoScroll,
-                shape = RoundedCornerShape(10.dp),
-                color = if (isAutoScrolling) EmeraldBadge.copy(alpha = 0.15f) else StudioBackground,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    if (isAutoScrolling) EmeraldBadge else StudioCardBorder
-                ),
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("toggle_auto_scroll_button")
-            ) {
-                Row(
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                Surface(
+                    onClick = onLaunchTikTok,
+                    shape = RoundedCornerShape(12.dp),
+                    color = StudioBackground,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, ElectricCyan.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("launch_tiktok_app_button")
                 ) {
-                    Icon(
-                        imageVector = if (isAutoScrolling) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                        contentDescription = null,
-                        tint = if (isAutoScrolling) EmeraldBadge else TextPrimary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(modifier = Modifier.width(5.dp))
-                    Text(
-                        text = if (isAutoScrolling) "Lướt (${autoScrollCountdown}s)" else "Lướt tự động",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isAutoScrolling) EmeraldBadge else TextPrimary
-                    )
+                    Row(
+                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        SvgDrawableGraphic(
+                            drawableResId = R.drawable.ic_svg_exit_bg,
+                            tint = ElectricCyan,
+                            size = 15.dp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Mở app TikTok",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = ElectricCyan
+                        )
+                    }
                 }
             }
 
-            Surface(
-                onClick = onTestSwipeNext,
-                shape = RoundedCornerShape(10.dp),
-                color = StudioBackground,
-                border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
-                modifier = Modifier
-                    .weight(1f)
-                    .testTag("test_swipe_next_button")
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Secondary Actions: Hands-Free Auto-Scroll & Test Next Swipe (SVG Canvas graphics)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
+                Surface(
+                    onClick = onToggleAutoScroll,
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isAutoScrolling) EmeraldBadge.copy(alpha = 0.15f) else StudioBackground,
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (isAutoScrolling) EmeraldBadge else StudioCardBorder
+                    ),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("toggle_auto_scroll_button")
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = ElectricCyan,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Thử chuyển video",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = ElectricCyan
-                    )
+                    Row(
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        SvgPlayPauseGraphic(
+                            isPlaying = isAutoScrolling,
+                            color = if (isAutoScrolling) EmeraldBadge else TextPrimary,
+                            size = 14.dp
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = if (isAutoScrolling) "Lướt (${autoScrollCountdown}s)" else "Lướt tự động",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (isAutoScrolling) EmeraldBadge else TextPrimary
+                        )
+                    }
+                }
+
+                Surface(
+                    onClick = onTestSwipeNext,
+                    shape = RoundedCornerShape(10.dp),
+                    color = StudioBackground,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, StudioCardBorder),
+                    modifier = Modifier
+                        .weight(1f)
+                        .testTag("test_swipe_next_button")
+                ) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        SvgArrowForwardGraphic(
+                            color = ElectricCyan,
+                            size = 14.dp
+                        )
+                        Spacer(modifier = Modifier.width(5.dp))
+                        Text(
+                            text = "Thử chuyển video",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = ElectricCyan
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
-        // Mini Guide / How-To
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFF0F172A))
-                .padding(10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Filled.TouchApp,
-                contentDescription = null,
-                tint = GoldBadge,
-                modifier = Modifier.size(18.dp)
-            )
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Cách dùng: Khi lướt TikTok, bấm nút ⚡ nổi để tải video 1080p không logo và tự động chuyển sang video tiếp theo!",
-                    fontSize = 11.sp,
-                    color = Color(0xFFCBD5E1),
-                    lineHeight = 15.sp
+            // Mini Guide / How-To
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Color(0xFF0F172A))
+                    .padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                SvgDrawableGraphic(
+                    drawableResId = R.drawable.ic_svg_tiktok_shortcut,
+                    tint = GoldBadge,
+                    size = 16.dp
                 )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Cách dùng: Khi lướt TikTok, bấm nút nổi để tải video 1080p không logo và tự động chuyển sang video tiếp theo!",
+                        fontSize = 11.sp,
+                        color = Color(0xFFCBD5E1),
+                        lineHeight = 15.sp
+                    )
+                }
             }
         }
     }
@@ -357,7 +446,7 @@ fun TikTokShortcutFeatureSection(
 
 @Composable
 private fun StatusPermissionChip(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    drawableResId: Int,
     label: String,
     isGranted: Boolean,
     onClick: () -> Unit,
@@ -378,11 +467,10 @@ private fun StatusPermissionChip(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
-            Icon(
-                imageVector = if (isGranted) Icons.Filled.CheckCircle else icon,
-                contentDescription = null,
+            SvgDrawableGraphic(
+                drawableResId = if (isGranted) R.drawable.ic_svg_check_circle else drawableResId,
                 tint = if (isGranted) EmeraldBadge else GoldBadge,
-                modifier = Modifier.size(13.dp)
+                size = 13.dp
             )
             Spacer(modifier = Modifier.width(4.dp))
             Text(

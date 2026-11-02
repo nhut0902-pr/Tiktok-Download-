@@ -1,16 +1,21 @@
 package com.example
 
+import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import com.example.data.local.DownloadHistoryDatabase
 import com.example.data.network.MediaDownloadEngine
 import com.example.data.network.TikTokExtractorRepository
 import com.example.data.preferences.StudioPreferencesRepository
 import com.example.data.update.GitHubAutoUpdater
+import com.example.service.ScreenRecorderForegroundService
 import com.example.ui.screens.TikStudioMainScreen
 import com.example.ui.screens.readClipboardText
 import com.example.ui.theme.TikStudioTheme
@@ -40,10 +45,41 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val overlayCaptureLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        val state = ScreenRecorderForegroundService.recorderState.value
+        if (result.resultCode == Activity.RESULT_OK && result.data != null) {
+            ScreenRecorderForegroundService.startRecordingSession(
+                context = this,
+                resultCode = result.resultCode,
+                resultData = result.data,
+                enableMic = state.isMicEnabled,
+                qualityOption = state.selectedQuality
+            )
+            if (state.autoExitToBackgroundOnRecord) {
+                ScreenRecorderForegroundService.exitAppToBackgroundForRecording(this)
+            }
+        } else {
+            ScreenRecorderForegroundService.startRecordingSession(
+                context = this,
+                resultCode = Activity.RESULT_OK,
+                resultData = null,
+                enableMic = state.isMicEnabled,
+                qualityOption = state.selectedQuality
+            )
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        if (!handleIncomingShareIntent(intent)) {
+        if (viewModel.screenRecorderState.value.autoCloseOtherAppsOnOpen) {
+            viewModel.closeOtherBackgroundAppsNow(this)
+        }
+        if (handleOverlayCaptureIntent(intent)) {
+            // Handled screen capture request from floating overlay / notification
+        } else if (!handleIncomingShareIntent(intent)) {
             checkClipboardForTikTokUrl()
         }
 
@@ -70,7 +106,28 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
-        handleIncomingShareIntent(intent)
+        if (!handleOverlayCaptureIntent(intent)) {
+            handleIncomingShareIntent(intent)
+        }
+    }
+
+    private fun handleOverlayCaptureIntent(intent: Intent?): Boolean {
+        if (intent?.action == ScreenRecorderForegroundService.ACTION_REQUEST_CAPTURE_FROM_OVERLAY) {
+            viewModel.selectMainTab(1)
+            try {
+                val manager = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as? MediaProjectionManager
+                val captureIntent = manager?.createScreenCaptureIntent()
+                if (captureIntent != null) {
+                    overlayCaptureLauncher.launch(captureIntent)
+                } else {
+                    ScreenRecorderForegroundService.startRecordingSession(this)
+                }
+            } catch (_: Exception) {
+                ScreenRecorderForegroundService.startRecordingSession(this)
+            }
+            return true
+        }
+        return false
     }
 
     private fun checkClipboardForTikTokUrl() {

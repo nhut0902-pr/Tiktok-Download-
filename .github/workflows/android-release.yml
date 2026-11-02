@@ -43,9 +43,12 @@ jobs:
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: 5. Generate Debug Keystore if Missing
+      - name: 5. Restore Official Signing Keystore (Prevent "App Not Installed" Signature Conflict)
         run: |
-          if [ ! -f debug.keystore ]; then
+          if [ -f debug.keystore.base64 ]; then
+            base64 -d debug.keystore.base64 > debug.keystore 2>/dev/null || base64 --decode debug.keystore.base64 > debug.keystore
+            echo "✅ Restored official debug.keystore from debug.keystore.base64"
+          elif [ ! -f debug.keystore ]; then
             keytool -genkey -v \
               -keystore debug.keystore \
               -storepass android \
@@ -83,14 +86,14 @@ jobs:
           fi
 
           APK_NAME="TikStudio-HD-${FINAL_VER}.apk"
-          BUILD_CODE=$(( ${{ github.run_number }} + 100 ))
+          BUILD_CODE=$(( ${{ github.run_number }} + 200 ))
 
           echo "version_tag=${FINAL_VER}" >> $GITHUB_OUTPUT
           echo "apk_name=${APK_NAME}" >> $GITHUB_OUTPUT
           echo "build_code=${BUILD_CODE}" >> $GITHUB_OUTPUT
           echo "==> Releasing TikStudio HD: ${FINAL_VER} (Code: ${BUILD_CODE}, APK: ${APK_NAME})"
 
-      - name: 7. Build APK for Release (${{ steps.prep_version.outputs.version_tag }})
+      - name: 7. Build Signed APK for Release (${{ steps.prep_version.outputs.version_tag }})
         run: |
           gradle :app:assembleDebug --no-daemon \
             -Pandroid.builder.sdkDownload=true \
@@ -113,10 +116,12 @@ jobs:
             - **Commit:** `${{ github.sha }}`
             - **Nhánh:** `${{ github.ref_name }}`
             - **Tệp cài đặt:** `${{ steps.prep_version.outputs.apk_name }}`
+            - **Chữ ký APK:** Đồng bộ `debug.keystore.base64` (Cập nhật đè trực tiếp không lỗi "Ứng dụng chưa được cài đặt")
 
             Mở ứng dụng trên điện thoại để nhận thông báo và tự động tải về bản cập nhật ${{ steps.prep_version.outputs.version_tag }} này.
           files: ${{ steps.prep_version.outputs.apk_name }}
           draft: false
           prerelease: false
+          overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

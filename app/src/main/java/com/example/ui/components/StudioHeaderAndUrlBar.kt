@@ -128,7 +128,7 @@ fun StudioTopHeader(
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
                         text = "TikStudio HD",
@@ -149,9 +149,24 @@ fun StudioTopHeader(
                             color = EmeraldBadge
                         )
                     }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(ElectricCyan.copy(alpha = 0.16f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                            .testTag("header_version_v103_badge")
+                    ) {
+                        Text(
+                            text = "V1.0.3",
+                            fontFamily = JetBrainsMonoFamily,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ElectricCyan
+                        )
+                    }
                 }
                 Text(
-                    text = "Tải Video, Ảnh Bìa & Hàng Loạt Full HD",
+                    text = "Tải Video, Quay Màn Hình Nền & Hàng Loạt Full HD",
                     style = MaterialTheme.typography.bodyMedium,
                     fontSize = 12.sp,
                     color = TextSecondary

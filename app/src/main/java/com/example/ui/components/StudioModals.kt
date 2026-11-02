@@ -977,9 +977,16 @@ fun StudioMediaPreviewDialog(
                                     modifier = Modifier.fillMaxSize()
                                 )
                             } else {
+                                val localVideoFile = File(item.localFilePath)
+                                val primaryVideoUri = if (localVideoFile.exists() && localVideoFile.length() > 4096L) {
+                                    Uri.fromFile(localVideoFile).toString()
+                                } else {
+                                    item.remoteStreamUrl
+                                }
                                 VideoStreamPlayerBox(
-                                    videoUrl = item.remoteStreamUrl,
-                                    posterUrl = item.thumbnailUrl
+                                    videoUrl = primaryVideoUri,
+                                    posterUrl = item.thumbnailUrl,
+                                    fallbackUrl = item.remoteStreamUrl
                                 )
                             }
                         }
@@ -1008,7 +1015,8 @@ fun StudioMediaPreviewDialog(
 @Composable
 private fun VideoStreamPlayerBox(
     videoUrl: String,
-    posterUrl: String
+    posterUrl: String,
+    fallbackUrl: String = ""
 ) {
     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         if (posterUrl.isNotBlank()) {
@@ -1030,6 +1038,17 @@ private fun VideoStreamPlayerBox(
                         setOnPreparedListener { mp ->
                             mp.isLooping = true
                             start()
+                        }
+                        setOnErrorListener { _, _, _ ->
+                            if (fallbackUrl.isNotBlank() && fallbackUrl != videoUrl) {
+                                try {
+                                    setVideoURI(Uri.parse(fallbackUrl))
+                                    start()
+                                } catch (_: Exception) {}
+                                true
+                            } else {
+                                true
+                            }
                         }
                     }
                 },

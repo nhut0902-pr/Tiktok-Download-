@@ -27,6 +27,9 @@ import com.example.data.update.ApkUpdateDownloadProgress
 import com.example.data.update.GitHubAutoUpdater
 import com.example.data.update.GitHubReleaseInfo
 import com.example.service.FloatingTikTokShortcutService
+import com.example.service.ScreenRecordQualityOption
+import com.example.service.ScreenRecorderForegroundService
+import com.example.service.ScreenRecorderState
 import com.example.service.TikAutoScrollAccessibilityService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -64,11 +67,13 @@ data class StudioUiState(
     val previewTarget: PreviewModalTarget? = null,
     val sampleLinks: List<SampleTikTokLink> = emptyList(),
     val githubReleaseInfo: GitHubReleaseInfo? = null,
-    val currentVersionName: String = "1.0.1",
+    val currentVersionName: String = "1.0.3",
     val isCheckingGitHubUpdate: Boolean = false,
     val apkUpdateDownloadProgress: ApkUpdateDownloadProgress? = null,
     val isUpdateBannerDismissed: Boolean = false,
     val isGitHubWorkflowDialogOpen: Boolean = false,
+    val selectedMainTab: Int = 0, // 0 = Tải TikTok Không Logo, 1 = Các tiện ích
+    val isTikTokUtilityDownloaded: Boolean = false,
     val isFloatingShortcutActive: Boolean = false,
     val isAccessibilityServiceActive: Boolean = false,
     val isAutoScrolling: Boolean = false,
@@ -984,7 +989,10 @@ class TikStudioViewModel(
                 onSuccess = { apkFile ->
                     val updatedVersion = gitHubAutoUpdater.normalizeVersionTag(release.versionTag)
                     preferencesRepository.markVersionUpdated(updatedVersion)
-                    gitHubAutoUpdater.installDownloadedApk(apkFile)
+                    val wasRepaired = _uiState.value.apkUpdateDownloadProgress?.wasRepairedForSignatureCompatibility == true
+                    if (!wasRepaired) {
+                        gitHubAutoUpdater.installDownloadedApk(apkFile)
+                    }
                     _uiState.update {
                         it.copy(
                             currentVersionName = updatedVersion,
@@ -993,7 +1001,7 @@ class TikStudioViewModel(
                                 isNewerThanCurrent = false
                             ),
                             isUpdateBannerDismissed = true,
-                            statusMessage = "Đã cập nhật thành công lên phiên bản $updatedVersion!",
+                            statusMessage = "Đã cập nhật thành công lên phiên bản $updatedVersion (Chữ ký APK tương thích thiết bị)!",
                             isStatusError = false
                         )
                     }
@@ -1087,6 +1095,7 @@ class TikStudioViewModel(
                 isAccessibilityServiceActive = accessibilityActive
             )
         }
+        ScreenRecorderForegroundService.syncOverlayPermissionState(context)
     }
 
     fun toggleFloatingShortcut(context: Context): Boolean {
@@ -1130,6 +1139,134 @@ class TikStudioViewModel(
 
     fun updateAutoDownloadOnScroll(enabled: Boolean) {
         viewModelScope.launch { preferencesRepository.updateAutoDownloadOnScroll(enabled) }
+    }
+
+    fun selectMainTab(tabIndex: Int) {
+        _uiState.update { it.copy(selectedMainTab = tabIndex) }
+    }
+
+    fun downloadTikTokShortcutUtility() {
+        _uiState.update {
+            it.copy(
+                isTikTokUtilityDownloaded = true,
+                statusMessage = "Đã tải xuống tiện ích Phím tắt TikTok & Tự động lướt V1.0.3!",
+                isStatusError = false
+            )
+        }
+    }
+
+    val screenRecorderState: StateFlow<ScreenRecorderState> = ScreenRecorderForegroundService.recorderState
+
+    fun installScreenRecorderUtility(context: Context? = null) {
+        viewModelScope.launch {
+            ScreenRecorderForegroundService.installUtilityAddon(context)
+        }
+    }
+
+    fun selectScreenRecordQuality(option: ScreenRecordQualityOption) {
+        ScreenRecorderForegroundService.selectRecordingQuality(option)
+    }
+
+    fun openScreenRecordQualityDialog() {
+        ScreenRecorderForegroundService.openQualitySelectorDialog()
+    }
+
+    fun closeScreenRecordQualityDialog() {
+        ScreenRecorderForegroundService.closeQualitySelectorDialog()
+    }
+
+    fun toggleFloatingRecorderBubble(context: Context, enabled: Boolean) {
+        ScreenRecorderForegroundService.toggleFloatingBubbleAndNotification(context, enabled)
+    }
+
+    fun toggleRecorderRadialMenu() {
+        ScreenRecorderForegroundService.toggleRadialMenuExpanded()
+    }
+
+    fun captureRecorderScreenshot(context: Context) {
+        ScreenRecorderForegroundService.captureInstantScreenshot(context)
+    }
+
+    fun toggleRecorderBrushTool() {
+        ScreenRecorderForegroundService.toggleBrushTool()
+    }
+
+    fun toggleScreenRecorderMic(enabled: Boolean) {
+        ScreenRecorderForegroundService.updateUtilityState {
+            it.copy(
+                isMicEnabled = enabled,
+                statusMessage = if (enabled) {
+                    "🎙️ Đã bật mở Mic thu âm khi quay màn hình nền"
+                } else {
+                    "🔇 Đã tắt thu âm Mic khi quay màn hình nền"
+                }
+            )
+        }
+    }
+
+    fun setScreenRecorderMicPermission(granted: Boolean) {
+        ScreenRecorderForegroundService.updateUtilityState {
+            it.copy(hasMicPermission = granted)
+        }
+    }
+
+    fun toggleAutoCloseOtherAppsOnOpen(enabled: Boolean) {
+        ScreenRecorderForegroundService.updateUtilityState {
+            it.copy(
+                autoCloseOtherAppsOnOpen = enabled,
+                statusMessage = if (enabled) {
+                    "Đã bật tự động thoát các app khác khi mở ứng dụng"
+                } else {
+                    "Đã tắt tự động thoát các app khác khi mở ứng dụng"
+                }
+            )
+        }
+    }
+
+    fun closeOtherBackgroundAppsNow(context: Context) {
+        ScreenRecorderForegroundService.closeOtherBackgroundApps(context)
+    }
+
+    fun toggleAutoExitToBackground(enabled: Boolean) {
+        ScreenRecorderForegroundService.updateUtilityState {
+            it.copy(autoExitToBackgroundOnRecord = enabled)
+        }
+    }
+
+    fun startBackgroundScreenRecording(
+        context: Context,
+        resultCode: Int,
+        resultData: Intent?,
+        qualityOption: ScreenRecordQualityOption = ScreenRecorderForegroundService.recorderState.value.selectedQuality
+    ) {
+        val currentState = ScreenRecorderForegroundService.recorderState.value
+        ScreenRecorderForegroundService.startRecordingSession(
+            context = context,
+            resultCode = resultCode,
+            resultData = resultData,
+            enableMic = currentState.isMicEnabled,
+            qualityOption = qualityOption
+        )
+    }
+
+    fun togglePauseResumeScreenRecording(context: Context) {
+        ScreenRecorderForegroundService.togglePauseResumeRecording(context)
+    }
+
+    fun stopBackgroundScreenRecording(context: Context) {
+        ScreenRecorderForegroundService.stopRecordingSession(context)
+    }
+
+    fun exitAppToRecordOtherApps(context: Context) {
+        if (!ScreenRecorderForegroundService.recorderState.value.isRecording) {
+            val currentState = ScreenRecorderForegroundService.recorderState.value
+            ScreenRecorderForegroundService.startRecordingSession(
+                context = context,
+                enableMic = currentState.isMicEnabled,
+                qualityOption = currentState.selectedQuality
+            )
+        }
+        ScreenRecorderForegroundService.exitAppToBackgroundForRecording(context)
     }
 
     fun launchTikTokApp(context: Context) {
