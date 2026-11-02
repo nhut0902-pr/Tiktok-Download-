@@ -486,7 +486,7 @@ class GitHubAutoUpdater(private val context: Context) {
 
     companion object {
         const val DEFAULT_GITHUB_REPO = "nhut0902-pr/Tiktok-Download-"
-        const val TARGET_UPDATE_VERSION = "1.0.3"
+        const val TARGET_UPDATE_VERSION = "1.0.4"
 
         const val WORKFLOW_YAML_TEMPLATE = """name: Build APK & Auto Publish GitHub Release
 
@@ -529,13 +529,13 @@ jobs:
               -validity 10000 -dname "CN=Android Debug,O=Android,C=US"
           fi
 
-      - name: 6. Build Android APK (Version 1.0.3)
-        run: gradle :app:assembleDebug --no-daemon -Pandroid.builder.sdkDownload=true -PversionName=1.0.3 -PversionCode=${'$'}(( ${'$'}{{ github.run_number }} + 200 ))
+      - name: 6. Build Android APK (Version 1.0.4)
+        run: gradle :app:assembleDebug --no-daemon -Pandroid.builder.sdkDownload=true -PversionName=1.0.4 -PversionCode=${'$'}(( ${'$'}{{ github.run_number }} + 200 ))
 
-      - name: 7. Prepare Version 1.0.3 APK
+      - name: 7. Prepare Version 1.0.4 APK
         id: prep_version
         run: |
-          VERSION_TAG="1.0.3"
+          VERSION_TAG="1.0.4"
           APK_NAME="TikStudio-HD-${'$'}{VERSION_TAG}.apk"
           cp app/build/outputs/apk/debug/app-debug.apk "${'$'}{APK_NAME}"
           echo "version_tag=${'$'}{VERSION_TAG}" >> ${'$'}GITHUB_OUTPUT

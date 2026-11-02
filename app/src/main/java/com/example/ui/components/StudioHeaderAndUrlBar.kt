@@ -157,7 +157,7 @@ fun StudioTopHeader(
                             .testTag("header_version_v103_badge")
                     ) {
                         Text(
-                            text = "V1.0.3",
+                            text = "V1.0.4",
                             fontFamily = JetBrainsMonoFamily,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,

@@ -432,7 +432,7 @@ fun TikStudioMainScreen(
                                 )
                                 Column {
                                     Text(
-                                        text = "Trung tâm Các Tiện Ích Mở Rộng (V1.0.3)",
+                                        text = "Trung tâm Các Tiện Ích Mở Rộng (V1.0.4)",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = TextPrimary

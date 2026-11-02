@@ -196,7 +196,7 @@ data class ScreenRecorderState(
     val closedBackgroundAppsCount: Int = 0,
     val savedRecordingsCount: Int = 0,
     val savedScreenshotsCount: Int = 0,
-    val statusMessage: String = "Vui lòng tải xuống tiện ích Quay Màn Hình V1.0.3 để sử dụng",
+    val statusMessage: String = "Vui lòng tải xuống tiện ích Quay Màn Hình V1.0.4 để sử dụng",
     val lastRecordedFilePath: String? = null,
     val lastRecordedQualityLabel: String? = null
 ) {
@@ -333,7 +333,7 @@ class ScreenRecorderForegroundService : Service() {
                     isFloatingBubbleEnabled = true,
                     isMiniPopupVisible = true,
                     hasOverlayPermission = hasOverlay,
-                    statusMessage = "✅ Đã tải Trình Ghi Màn Hình V1.0.3! Nút nổi cam & Thanh thông báo đã sẵn sàng."
+                    statusMessage = "✅ Đã tải Trình Ghi Màn Hình V1.0.4! Nút nổi cam & Thanh thông báo đã sẵn sàng."
                 )
             }
             if (context != null) {

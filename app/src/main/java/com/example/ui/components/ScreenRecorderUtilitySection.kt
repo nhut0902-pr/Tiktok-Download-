@@ -205,7 +205,7 @@ fun ScreenRecorderUtilitySection(
                                 .testTag("version_v103_badge")
                         ) {
                             Text(
-                                text = "V1.0.3",
+                                text = "V1.0.4",
                                 fontFamily = JetBrainsMonoFamily,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
@@ -255,7 +255,7 @@ fun ScreenRecorderUtilitySection(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
-                text = "Các bước sử dụng Trình Ghi Màn Hình V1.0.3:",
+                text = "Các bước sử dụng Trình Ghi Màn Hình V1.0.4:",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = RecorderOrange
@@ -360,7 +360,7 @@ fun ScreenRecorderUtilitySection(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Tải xuống tiện ích Quay Màn Hình (V1.0.3)",
+                        text = "Tải xuống tiện ích Quay Màn Hình (V1.0.4)",
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )

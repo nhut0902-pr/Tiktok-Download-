@@ -17,8 +17,8 @@ android {
     minSdk = 24
     targetSdk = 36
     val versionFile = rootProject.file("version.txt")
-    val fileVersion = if (versionFile.exists()) versionFile.readText().trim() else "1.0.3"
-    val propVersionCode = project.findProperty("versionCode")?.toString()?.toIntOrNull() ?: 3
+    val fileVersion = if (versionFile.exists()) versionFile.readText().trim() else "1.0.4"
+    val propVersionCode = project.findProperty("versionCode")?.toString()?.toIntOrNull() ?: 4
     val propVersionName = project.findProperty("versionName")?.toString() ?: fileVersion
     versionCode = propVersionCode
     versionName = propVersionName

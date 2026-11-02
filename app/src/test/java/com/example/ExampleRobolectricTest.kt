@@ -62,13 +62,13 @@ class ExampleRobolectricTest {
         assertEquals(2, batchUrls.size)
 
         val updater = GitHubAutoUpdater(context)
-        assertEquals("1.0.3", GitHubAutoUpdater.TARGET_UPDATE_VERSION)
-        assertEquals("1.0.3", updater.normalizeVersionTag("v1.0.3"))
+        assertEquals("1.0.4", GitHubAutoUpdater.TARGET_UPDATE_VERSION)
+        assertEquals("1.0.4", updater.normalizeVersionTag("v1.0.4"))
         assertEquals("nhut0902-pr/Tiktok-Download-", updater.normalizeRepoSlug(""))
         assertEquals("nhut0902-pr/Tiktok-Download-", updater.normalizeRepoSlug("lamminhnhut/TikStudio-HD"))
-        assertTrue(updater.isRemoteVersionNewer("1.0.3", "1.0.2"))
-        org.junit.Assert.assertFalse(updater.isRemoteVersionNewer("1.0.3", "1.0.3"))
-        org.junit.Assert.assertFalse(updater.isRemoteVersionNewer("v1.0.3", "1.0.3"))
+        assertTrue(updater.isRemoteVersionNewer("1.0.4", "1.0.3"))
+        org.junit.Assert.assertFalse(updater.isRemoteVersionNewer("1.0.4", "1.0.4"))
+        org.junit.Assert.assertFalse(updater.isRemoteVersionNewer("v1.0.4", "1.0.4"))
         assertTrue(GitHubAutoUpdater.WORKFLOW_YAML_TEMPLATE.contains("9.3.1"))
         assertTrue(GitHubAutoUpdater.WORKFLOW_YAML_TEMPLATE.contains("debug.keystore.base64"))
     }

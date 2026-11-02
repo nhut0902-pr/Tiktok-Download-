@@ -127,7 +127,7 @@ fun TikTokShortcutFeatureSection(
                                 .padding(horizontal = 6.dp, vertical = 1.dp)
                         ) {
                             Text(
-                                text = "V1.0.3",
+                                text = "V1.0.4",
                                 fontFamily = JetBrainsMonoFamily,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
@@ -203,7 +203,7 @@ fun TikTokShortcutFeatureSection(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Tải xuống tiện ích Phím tắt TikTok",
+                        text = "Tải xuống tiện ích Phím tắt TikTok (V1.0.4)",
                         fontWeight = FontWeight.Bold,
                         fontSize = 12.sp
                     )
@@ -221,7 +221,7 @@ fun TikTokShortcutFeatureSection(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "✅ Đã tải & kích hoạt tiện ích Phím tắt TikTok V1.0.3",
+                    text = "✅ Đã tải & kích hoạt tiện ích Phím tắt TikTok V1.0.4",
                     fontSize = 11.sp,
                     color = EmeraldBadge,
                     modifier = Modifier.weight(1f)
@@ -282,6 +282,63 @@ fun TikTokShortcutFeatureSection(
                     },
                     modifier = Modifier.weight(1f)
                 )
+            }
+
+            // Android 13/14/15/16 Restricted Settings Unlock Guide (Matches Screenshot 2)
+            if (!hasAccessibilityPermission) {
+                Spacer(modifier = Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF1E293B),
+                    border = androidx.compose.foundation.BorderStroke(1.2.dp, GoldBadge),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("restricted_settings_guide_card")
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            SvgDrawableGraphic(
+                                drawableResId = R.drawable.ic_svg_check_circle,
+                                tint = GoldBadge,
+                                size = 16.dp
+                            )
+                            Text(
+                                text = "Mở khóa 'Cài đặt bị hạn chế' (Nếu máy báo từ chối cấp quyền)",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = GoldBadge
+                            )
+                        }
+                        Text(
+                            text = "Khi vào Hỗ trợ tiếp cận nếu máy hiện 'Do chế độ Cài đặt hạn chế kiểm soát' hoặc 'Ứng dụng đã bị từ chối cấp quyền':\n1. Nhấn nút bên dưới để mở mục 'Thông tin ứng dụng TikStudio HD'.\n2. Nhìn góc trên cùng bên phải, bấm vào DẤU 3 CHẤM (⋮).\n3. Chọn 'Cho phép cài đặt bị hạn chế' -> Nhập vân tay hoặc mã PIN.\n4. Sau đó quay lại Hỗ trợ tiếp cận là sẽ gạt BẬT được công tắc!",
+                            fontSize = 11.sp,
+                            color = Color(0xFFE2E8F0),
+                            lineHeight = 15.sp
+                        )
+                        Button(
+                            onClick = { openAppInfoForRestrictedSettings(context) },
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = GoldBadge,
+                                contentColor = Color(0xFF0F172A)
+                            ),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Bấm vào đây để mở Thông tin ứng dụng (Chọn dấu 3 chấm ⋮)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -510,4 +567,16 @@ fun requestAccessibilityPermission(context: Context) {
     try {
         context.startActivity(intent)
     } catch (_: Exception) {}
+}
+
+fun openAppInfoForRestrictedSettings(context: Context) {
+    try {
+        val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+            data = Uri.parse("package:${context.packageName}")
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        }
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        requestAccessibilityPermission(context)
+    }
 }

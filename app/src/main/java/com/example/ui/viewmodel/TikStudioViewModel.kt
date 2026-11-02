@@ -67,7 +67,7 @@ data class StudioUiState(
     val previewTarget: PreviewModalTarget? = null,
     val sampleLinks: List<SampleTikTokLink> = emptyList(),
     val githubReleaseInfo: GitHubReleaseInfo? = null,
-    val currentVersionName: String = "1.0.3",
+    val currentVersionName: String = "1.0.4",
     val isCheckingGitHubUpdate: Boolean = false,
     val apkUpdateDownloadProgress: ApkUpdateDownloadProgress? = null,
     val isUpdateBannerDismissed: Boolean = false,
@@ -1149,7 +1149,7 @@ class TikStudioViewModel(
         _uiState.update {
             it.copy(
                 isTikTokUtilityDownloaded = true,
-                statusMessage = "Đã tải xuống tiện ích Phím tắt TikTok & Tự động lướt V1.0.3!",
+                statusMessage = "Đã tải xuống tiện ích Phím tắt TikTok & Tự động lướt V1.0.4!",
                 isStatusError = false
             )
         }
